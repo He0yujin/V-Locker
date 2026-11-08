@@ -1,0 +1,66 @@
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+
+from backend.app.db.database import Base
+
+
+class User(Base):
+    """
+    차량 및 운전자 프로필 모델
+    - 차량 모델, 배터리 총 용량, 공차 중량, 평소 누적 전비 저장
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(50), default="캠퍼 드라이버")
+    vehicle_model = Column(String(50), default="IONIQ 5 Long Range")
+    battery_capacity = Column(Float, default=77.4)   # kWh
+    curb_weight = Column(Integer, default=2010)       # kg
+    avg_efficiency = Column(Float, default=5.4)       # km/kWh
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    sessions = relationship("V2LSession", back_populates="user")
+
+
+class V2LSession(Base):
+    """
+    V2L 세이프 락커 활성화 세션 모델
+    - 목적지, 출발시각, 예상 기온, 상승 고도, 탑승자 수, 안전 마진 모드
+    - 실시간 배터리 SoC, 목표 차단 배터리 SoC, V2L 상태, 유틸리티 모드(무시동 히터) 상태
+    """
+    __tablename__ = "v2l_sessions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), default=1)
+
+    # 귀가 경로 및 환경 변수
+    destination_name = Column(String(100), default="우리 집 (서울 강남)")
+    distance_km = Column(Float, default=86.0)
+    elevation_gain_m = Column(Float, default=640.0)
+    expected_temp = Column(Float, default=-5.0)       # ℃
+    departure_time = Column(String(50), default="내일 오전 10:00")
+    passengers = Column(Integer, default=2)
+
+    # AI 예측 및 마진 설정
+    margin_mode = Column(String(20), default="NORMAL") # SAFE, NORMAL, MAX
+    target_soc = Column(Float, default=28.0)           # V2L 차단 목표 배터리 (%)
+    current_soc = Column(Float, default=61.0)          # 실시간 배터리 잔량 (%)
+    current_v2l_load_kw = Column(Float, default=1.2)   # 실시간 V2L 소비 전력 (kW)
+
+    # 락아웃 및 안전 제어 상태
+    # ACTIVE: 정상 V2L 전원 공급 중
+    # WARN_60M: 1시간 전 알림 발생
+    # WARN_30M: 30분 전 긴급 알림 발생
+    # LOCKED_OUT: V2L 하드웨어 릴레이 차단 완료
+    v2l_status = Column(String(20), default="ACTIVE")
+    relay_connected = Column(Boolean, default=True)      # V2L 하드웨어 릴레이 물리적 연결 여부
+    utility_mode_active = Column(Boolean, default=False) # 무시동 히터(유틸리티 모드 21℃) 작동 여부
+    is_fallback = Column(Boolean, default=False)         # 통신 장애 Fallback 사용 여부
+    extended_count = Column(Integer, default=0)          # 비상 충전소 재계산으로 사용 연장된 횟수
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="sessions")
+
