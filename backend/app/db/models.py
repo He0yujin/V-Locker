@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 
 from backend.app.db.database import Base
@@ -11,6 +11,13 @@ class User(Base):
     - 차량 모델, 배터리 총 용량, 공차 중량, 평소 누적 전비 저장
     """
     __tablename__ = "users"
+    
+    __table_args__ = (
+        CheckConstraint("battery_capacity > 0", name="ck_user_battery_capacity"),
+        CheckConstraint("curb_weight > 0", name="ck_user_curb_weight"),
+        CheckConstraint("avg_efficiency > 0", name="ck_user_avg_efficiency"),
+    )
+
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(50), default="캠퍼 드라이버")
@@ -30,6 +37,18 @@ class V2LSession(Base):
     - 실시간 배터리 SoC, 목표 차단 배터리 SoC, V2L 상태, 유틸리티 모드(무시동 히터) 상태
     """
     __tablename__ = "v2l_sessions"
+    
+    __table_args__ = (
+        CheckConstraint("current_soc BETWEEN 0 AND 100", name="ck_session_current_soc"),
+        CheckConstraint("target_soc BETWEEN 10 AND 95", name="ck_session_target_soc"),
+        CheckConstraint("distance_km > 0", name="ck_session_distance"),
+        CheckConstraint("elevation_gain_m >= 0", name="ck_session_elevation"),
+        CheckConstraint(
+            "margin_mode IN ('SAFE', 'NORMAL', 'MAX_USE')",
+            name="ck_session_margin_mode"
+        ),
+    )
+
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), default=1)
