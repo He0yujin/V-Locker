@@ -29,32 +29,34 @@
 * **기상청 단기예보 연동:** 익일 출발 시각의 최저 기온을 수집해 저온 효율 저하 계수($\eta_{temp}$) 적용.
 * **내비게이션 토폴로지 연동:** 목적지까지의 순수 획득 고도($\Delta h$)와 내리막 회생제동(75% 회수)을 반영한 순 위치에너지 산출.
 * **콜드 스타트 & HVAC 스파이크 차감:** 영하 날씨 출발 시 배터리 승온 및 실내 난방 상수를 사전 확보.
-* **3단계 안전 마진 모드:**
-  * **안심 (Safe / Max Buffer):** 예약 잔량 **34%** | 여유 넉넉 확보 · 예측 오차 및 추가 난방 대비
-  * **균형 (Normal / 추천):** 예약 잔량 **28%** | 주행 데이터 기준 최적화 · 일반적인 귀가 조건
-  * **최대 사용 (Max Usable):** 예약 잔량 **24%** | V2L 사용 우선 · 귀가 필수치만 남기고 전력 극대화
-* **가용 시간(Time) 실시간 환산:** 배터리 %뿐만 아니라 현재 소비 전력(1.2kW) 기준 **"앞으로 약 21.3시간 사용 가능"**을 동시 표기.
+* **3단계 비례 가중치 안전 마진 모드 (Proportional Safety Factor):**
+  * 환경·차량 변수를 결합해 순수 귀가 필요 전력($E_{pure}$)을 먼저 산출한 뒤, 목적에 맞게 비례 여유를 부여한다.
+  * **안심 (`SAFE`, x1.35):** 순수 필요 전력 +35% 여유 · 폭설·정체·추가 난방까지 완벽 방어
+  * **균형 (`NORMAL`, x1.15, 추천):** 순수 필요 전력 +15% 여유 · 주행 및 환경 변수를 고려한 표준 추천
+  * **최대 사용 (`MAX_USE`, x1.00):** 귀가 최소 필수 전력만 보존 (하한선 BMS 10% 보호) · V2L 가용 시간 극대화
+* **가용 시간(Time) 실시간 환산:** 배터리 %뿐만 아니라 현재 소비 전력(kW) 기준 **"앞으로 약 N.N시간 사용 가능"**을 동시 표기.
 
 ### 2) 엣지 케이스 방어 로직 (Soft Lock-out & Fail-Safe)
-* **단계별 사전 예고 알림:** V2L 차단 **1시간 전(1차)**, **30분 전(2차 긴급)** 인포테인먼트 HUD, 스피커 차임벨, 스마트폰 푸시 알림 발송.
+* **단계별 사전 예고 알림:** V2L 차단 **1시간 전(1차)**, **30분 전(2차 긴급)** 인포테인먼트 HUD 및 사운드 알림.
 * **동사 방지 무시동 히터(유틸리티 모드) 자동 전환:** 
   * 야간 수면 중 갑작스러운 V2L 차단으로 전기장판이 꺼져 저체온증/동사 사고가 발생하는 것을 방지하기 위해, **V2L 차단 즉시 차량 내부 공조(유틸리티 모드, 21℃)를 최소 난방 온도로 자동 가동**.
-* **스마트 [사용 연장] 안전 장치:** 30분 전 알림 시 무제한 연장이 아닌, **인근 비상 급속 충전소 경로로 안전 마진을 재계산**하여 목표치를 낮추고 안전하게 추가 가용 시간 확보.
-* **통신 장애 Fallback 안심 방어:** 외부 API 장애 또는 3.0초 타임아웃 발생 시 기본 안전 가중치(-5℃, 오르막 300m)로 자동 대체 연산.
+* **스마트 [사용 연장] 안전 장치:** 30분 전 알림 시 무제한 연장이 아닌, **카카오 로컬/길찾기로 탐색한 최단거리 비상 급속 충전소 경로를 물리 엔진으로 재계산**해 안전하게 추가 가용 시간 확보.
+* **3중 통신 장애 Fallback 방어:** 기상청/카카오 API 장애 또는 3.0초 타임아웃 발생 시 백업 API(Open-Meteo / OSRM) → 최종 안전 기본값(-5℃, 86km, +640m) 순으로 자동 방어.
 
 ---
 
 ## 3. 배터리 소모량 예측 수식 모델
 
-$$E_{total} = \frac{E_{driving}(d, \eta_{base}) + E_{elevation}(\Delta h, m)}{\eta_{temp}(T)} + E_{spike}(T) + E_{margin}(Mode)$$
+$$E_{pure} = \frac{E_{driving}(d, \eta_{base}) + E_{elevation}(\Delta h, m)}{\eta_{temp}(T)} + E_{spike}(T), \quad E_{target} = E_{pure} \times \text{Multiplier}_{Mode}$$
 
-```
-1. 기본 주행 에너지 (E_base) = 거리(d) / 평소 전비(η_base) = 86km / 5.4km/kWh = 15.93 kWh
+```text
+예시 (IONIQ 5 Long Range 77.4kWh · 전비 5.4km/kWh · 86km · +640m · -5℃ 기준):
+1. 기본 주행 에너지 (E_base) = 거리(86km) / 평소 전비(5.4) = 15.93 kWh
 2. 지형 위치에너지 (E_elev)  = (총질량 2190kg * g * 640m) / (3.6e6 * 0.88) * (1 - 0.75 회생) = 1.08 kWh
-3. 저온 효율 계수 (η_temp)   = -5℃ 기준 0.8125 (약 18.8% 효율 저하 보정)
-4. 저온 보정 주행 에너지   = (15.93 + 1.08) / 0.8125 = 20.93 kWh
+3. 저온 효율 계수 (η_temp)   = -5℃ 기준 0.812 (약 18.8% 효율 저하 보정)
+4. 저온 보정 주행 에너지     = (15.93 + 1.08) / 0.812 = 20.93 kWh
 5. 콜드스타트 & HVAC 스파이크 = -5℃ 기준 0.8 kWh 사전 확보
-6. 순수 귀가 소모 전력     = 20.93 + 0.8 = 21.73 kWh (77.4kWh 배터리 기준 28.08% ≈ 28.0%)
+6. 순수 귀가 소모 전력(MAX_USE x1.00) = 21.73 kWh (28.1%) → NORMAL(x1.15) 32.3% / SAFE(x1.35) 37.9%
 ```
 
 ---
@@ -94,9 +96,10 @@ $$E_{total} = \frac{E_{driving}(d, \eta_{base}) + E_{elevation}(\Delta h, m)}{\e
 ## 5. 기술 스택 (Tech Stack)
 
 * **Backend:** Python 3.13, **FastAPI**, **SQLAlchemy**, **Pydantic v2**, **HTTPX**
-* **Database:** SQLite (온보드 임베디드 DB)
-* **Frontend:** React, TypeScript, Vite, Tailwind CSS, Lucide Icons (Pretendard 폰트)
-* **Testing:** Pytest, AnyIO (단위/통합 테스트 100% 통과)
+* **External Live APIs:** 기상청 단기예보(`15084084`), 카카오 로컬, 카카오모빌리티 길찾기, Open-Meteo Elevation
+* **Database:** SQLite (온보드 임베디드 DB / PostgreSQL 마이그레이션 가능)
+* **In-Car Client (Target):** Android Automotive OS (Kotlin, Pleos Vehicle SDK `2.3.1`, Retrofit2)
+* **Testing:** Pytest (단위/통합 테스트 13종 100% 통과)
 * **Target Environment:** 현대자동차 Pleos App Market (SDV)
 
 ---
@@ -114,6 +117,9 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 의존성 설치
 pip install -r backend/requirements.txt
+
+# 환경변수 설정 (.env.example 복사 후 실제 키 입력)
+cp .env.example .env
 ```
 
 ### 2) 백엔드 서버 실행
@@ -122,7 +128,7 @@ PYTHONPATH=. uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 * API 명세서(Swagger UI): `http://localhost:8000/docs`
 
-### 3) 단위 및 통합 테스트 실행 (8종 100% 통과 검증)
+### 3) 단위 및 통합 테스트 실행 (13종 100% 통과 검증)
 ```bash
 PYTHONPATH=. pytest backend/tests/ -v
 ```
@@ -138,23 +144,28 @@ V2L Safe Locker/
 │   │   ├── api/
 │   │   │   └── routes.py         # 통일된 JSON RESTful API 라우터
 │   │   ├── core/
-│   │   │   └── calculator.py     # 배터리 소모량 예측 코어 엔진 (논문/수식)
+│   │   │   ├── config.py         # .env 환경변수 및 타임아웃(3.0s) 로드
+│   │   │   └── calculator.py     # 비례 가중치 배터리 예측 코어 엔진
 │   │   ├── db/
 │   │   │   ├── database.py       # SQLAlchemy SQLite 연결 설정
 │   │   │   └── models.py         # User, V2LSession DB 모델
 │   │   ├── schemas/
 │   │   │   └── session.py        # Pydantic v2 입출력 스키마
 │   │   ├── services/
-│   │   │   ├── weather.py        # 기상청 단기예보 연동 (3초 타임아웃 / Fallback)
-│   │   │   ├── navigation.py     # 내비게이션 토폴로지 연동 (3초 타임아웃 / Fallback)
+│   │   │   ├── places.py         # 카카오 로컬 목적지 & 충전소 검색
+│   │   │   ├── weather.py        # 기상청 단기예보 연동 (격자변환 / Fallback)
+│   │   │   ├── navigation.py     # 카카오모빌리티 길찾기 + 지형 고도 API
 │   │   │   └── v2l_controller.py # 릴레이 차단, Soft Lock-out, 무시동 히터 제어
 │   │   └── main.py               # FastAPI 애플리케이션 진입점
 │   ├── requirements.txt
 │   └── tests/
-│       ├── test_calculator.py    # 수식/논문/와이어프레임 정합성 단위 테스트
+│       ├── test_calculator.py    # 수식/비례가중치/외부API 파싱 단위 테스트
 │       └── test_api_endpoints.py # 엔드포인트 수명주기 통합 테스트
+├── .env.example                  # API 키 환경변수 템플릿
 ├── 와이어프레임/                  # IVI 와이드 인포테인먼트 화면 스크린샷
 ├── 요구사항_정의서.md              # 상세 시스템 요구사항 정의서 (v1.2)
-├── API_명세서.md                  # RESTful API 엔드포인트 명세서
+├── API_명세서.md                  # RESTful API 엔드포인트 명세서 (v2.0)
+├── Pleos_개발_가이드.md           # Pleos Playground (Kotlin + SDK 2.3.1) 개발 가이드
 └── README.md                     # 프로젝트 소개 문서
 ```
+

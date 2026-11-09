@@ -1,162 +1,252 @@
-# [V2L 세이프 락커] API 연동 및 엔드포인트 명세서 (API Specification)
+# 🔌 V2L 세이프 락커 API 연동 및 엔드포인트 명세서 (v2.0)
 
-* **버전:** v1.0
-* **작성일자:** 2026-11-08
-* **적용 환경:** 현대자동차 Pleos App Market (SDV) & V2L Safe Locker 온보드 백엔드
+* **버전:** v2.0 (실제 외부 API 연동 및 비례 가중치 엔진 반영)
+* **작성/갱신일자:** 2026-11-09
+* **적용 환경:** 현대자동차 Pleos App Market (Android Automotive Kotlin 클라이언트) ↔ Python FastAPI 백엔드
 
----
-
-## 1. 연동 API 전체 개요 (Architecture Overview)
-
-V2L 세이프 락커는 **외부 클라우드 API (기상/지형)**, **차량 내부 SDV 제어 API (BMS/공조/릴레이)**, 그리고 **프론트엔드-백엔드 간 RESTful API**의 3개 레이어로 구성됩니다.
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        1. 외부 클라우드 API                             │
-│  - [외부] 기상청 단기예보 API : 익일 아침 최저기온 및 기상 상태 조회          │
-│  - [외부] 내비게이션 토폴로지 API : 목적지 주행거리, 획득고도, 오르막 비율 조회│
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (Timeout 3.0s / Fallback 보장)
-┌───────────────────────────────────▼────────────────────────────────────┐
-│                  2. V2L Safe Locker Backend REST API                   │
-│  - POST /api/predict : 다중 데이터 융합 배터리 소모량 & 3단계 모드 계산      │
-│  - POST /api/sessions : 모니터링 세션 등록 및 활성화                     │
-│  - GET  /api/sessions/{id} : 실시간 SoC, kW, 잔여 시간, 경고 상태 조회    │
-│  - POST /api/sessions/{id}/tick : 시뮬레이션 가속 (배터리/시간 소모)     │
-│  - POST /api/sessions/{id}/extend : 비상 충전소 기반 스마트 사용 연장     │
-│  - POST /api/sessions/{id}/lockout : V2L 차단 & 무시동 히터 페일세이프     │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (차량 하드웨어 제어 명령)
-┌───────────────────────────────────▼────────────────────────────────────┐
-│                    3. 현대차 SDV (Pleos In-Car) API                    │
-│  - Pleos BMS API : 실시간 배터리 SoC(%), 팩 온도(℃), 평균 전비 조회       │
-│  - Pleos V2L Hardware Relay API : 외부 220V V2L 물리 전원 ON/OFF 차단   │
-│  - Pleos HVAC Utility API : 동사 방지 무시동 히터(유틸리티 모드 21℃) 가동  │
-└────────────────────────────────────────────────────────────────────────┘
-```
+> [!IMPORTANT]
+> 본 명세서는 [routes.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/api/routes.py)의 실제 구현과 100% 일치하도록 현행화되었습니다.  
+> 모든 백엔드 응답은 `{"status": 200, "data": {...}, "message": "..."}` 표준 JSON 포맷을 따릅니다.
 
 ---
 
-## 2. 외부 및 차량 내부 연동 API 상세
+## 1. 연동 API 전체 아키텍처 (Architecture Overview)
 
-### 2.1 [외부] 기상청 단기예보 API (공공데이터포털)
-* **제공처:** 기상청 (Korea Meteorological Administration)
-* **목적:** 익일 출발 예정 시각(예: 오전 07:00 ~ 10:00)의 야외 최저 기온 및 한파 특보 데이터 수집.
-* **프로토콜:** HTTP GET (REST JSON)
-* **호출 주기:** 세션 생성 시 1회 및 15분 간격 갱신 (캐싱 적용)
-* **타임아웃 & Fallback:** **3.0초** 초과 시 기본 안전값인 **-5.0℃** 자동 적용.
+```mermaid
+flowchart TB
+    subgraph EXT["1. 외부 클라우드 API (실연동 완료 / 3.0s Timeout + Multi-Fallback)"]
+        KMA["기상청 단기예보 15084084<br/>(5km 격자 변환 + Open-Meteo 백업)"]
+        KL["카카오 로컬 API<br/>(목적지 검색 & 주변 충전소 탐색)"]
+        KM["카카오모빌리티 Directions<br/>+ Open-Meteo 지형 고도 API"]
+    end
 
-### 2.2 [외부] 내비게이션 토폴로지 API (카카오/티맵/Pleos Map SDK)
-* **제공처:** 내비게이션 라우팅 엔진
-* **목적:** 출발지(캠핑장)부터 목적지(집/충전소)까지의 **단순 평면 거리가 아닌 '순수 획득 고도(Elevation Gain, $\Delta h$)'와 경사도 프로파일** 수집.
-* **파라미터:** `origin` (출발지 위경도), `destination` (목적지 위경도)
-* **응답 데이터:**
-  * `distance_km`: 총 주행거리 (km)
-  * `elevation_gain_m`: 총 획득 고도 (오르막 상승 고도 합계, m)
-  * `estimated_duration_min`: 예상 소요 시간 (분)
-* **타임아웃 & Fallback:** **3.0초** 초과 시 기본 안전 경로값(**거리 86km, 고도 640m**) 자동 적용.
+    subgraph BE["2. V2L Safe Locker Python FastAPI 백엔드"]
+        R1["GET /api/places/search · GET /api/chargers/nearby"]
+        R2["GET/PUT /api/user · POST /api/predict"]
+        R3["POST /api/sessions · GET /api/sessions/{id}"]
+        R4["POST /api/sessions/{id}/tick · extend · lockout"]
+    end
 
-### 2.3 [SDV] 현대자동차 Pleos In-Car 하드웨어 제어 API
-* **제공처:** 현대차 SDV 통합 OS (Pleos Vehicle HAL / SDK)
-* **목적:** 스마트폰 앱으로는 불가능한 차량 하드웨어 직접 제어.
-  1. **`pleos.bms.get_state()`**: 현재 배터리 SoC (0~100%), 전압, 배터리 모듈 온도, 누적 평균 전비(km/kWh) 수신.
-  2. **`pleos.v2l.set_relay(enabled: bool)`**: V2L 메인 릴레이 물리적 개폐 명령 (목표치 도달 시 전원 차단).
-  3. **`pleos.climate.set_utility_mode(temp: 21, fan: 2)`**: V2L 차단 즉시 동사 방지용 무시동 히터(유틸리티 모드) 최소 난방 자동 가동.
+    subgraph PLEOS["3. 현대자동차 Pleos In-Car (Kotlin AAOS 앱)"]
+        EV["EvBattery: 실시간 SoC(%) & 평균 전비"]
+        HV["HVAC: 동사 방지 21℃ 유틸리티 히터 가동"]
+        RL["V2L Relay 어댑터: 220V V2L 차단 추상화"]
+    end
+
+    EXT -->|실시간 환경/경로 데이터| BE
+    BE <-->|Retrofit2 HTTP JSON| PLEOS
+```
+
+---
+
+## 2. 외부 데이터 및 차량 제어 연동 상세
+
+### 2.1 [외부] 기상청 단기예보 조회서비스 (`15084084`)
+* **파일:** [weather.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/services/weather.py)
+* **연동 방식:** WGS84 위경도 → 기상청 공식 5km 격자(`nx, ny`, 람베르트 정각원추도법) 자동 변환 후 `getVilageFcst` 호출
+* **추출 항목:** 출발 예정 날짜(`오늘`/`내일`/`모레`) 및 시각(`TMP` 1시간 기온, `SKY` 하늘상태)
+* **3중 안전망 (Fail-Safe):**
+  1. **1순위:** 기상청 단기예보 (`15084084`)
+  2. **2순위:** Open-Meteo 실시간 한국 예보 (기상청 일시 장애/지연 시 자동 전환)
+  3. **3순위:** Default Safety Fallback (**-5.0℃**, `is_fallback: true`)
+
+### 2.2 [외부] 카카오 로컬 & 카카오모빌리티 토폴로지 API
+* **파일:** [places.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/services/places.py), [navigation.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/services/navigation.py)
+* **목적:**
+  1. 목적지 명칭 → 위경도 좌표 변환 (`/v2/local/search/keyword.json`)
+  2. 현재 차박지 반경 20km 내 최단거리 전기차 충전소 탐색 (`query="전기차충전소"`)
+  3. 자동차 실도로 주행거리(km), 소요시간(분) + 폴리라인 25개 샘플링 포인트 기반 **순수 획득 고도($\Delta h$)** 산출
+* **3중 안전망 (Fail-Safe):**
+  1. **1순위:** 카카오모빌리티 Directions + Open-Meteo Elevation
+  2. **2순위:** OSRM 오픈소스 도로 라우팅 + Open-Meteo Elevation
+  3. **3순위:** Default Safety Fallback (**86.0km, +640.0m**, `is_fallback: true`)
+
+### 2.3 [SDV] 현대자동차 Pleos Vehicle SDK v2.3.1 연동 포인트
+* **상세 가이드:** [Pleos_개발_가이드.md](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/Pleos_%EA%B0%9C%EB%B0%9C_%EA%B0%80%EC%9D%B4%EB%93%9C.md) 참조
+* **`EvBattery`:** 실시간 SoC(%) 및 주행 전비(km/kWh) → 백엔드 `/api/predict`, `/api/sessions` 전달
+* **`HVAC`:** 락아웃 발생 시 동사 방지를 위해 차량 실내 목표 온도 **21.0℃** 유지 제어
+* **V2L 릴레이 차단 어댑터:** 공개 SDK 미노출 제어 영역을 `V2lHardwareController` 인터페이스로 추상화해 백엔드 상태 머신(`LOCKED_OUT`)과 연동
 
 ---
 
 ## 3. 백엔드 RESTful API 상세 명세
 
-모든 백엔드 응답은 통일된 JSON 구조를 준수합니다:
-```json
-{
-  "status": 200,
-  "data": { ... },
-  "message": "성공 안내 메시지"
-}
-```
-
----
-
-### 3.1 배터리 소모량 예측 및 3단계 모드 산출
-* **엔드포인트:** `POST /api/predict`
-* **설명:** 목적지, 출발시각, 탑승객 수, 현재 SoC를 기반으로 기상/지형/전비 데이터를 융합 분석하여 3가지 모드(안심/균형/최대사용)의 예약 잔량(%)과 가용 시간(Time)을 반환합니다.
-* **Request Body:**
-```json
-{
-  "destination_name": "우리 집 (서울 강남)",
-  "distance_km": 86.0,
-  "elevation_gain_m": 640.0,
-  "departure_time": "내일 오전 10:00",
-  "passengers": 2,
-  "current_soc_percent": 61.0,
-  "expected_temp_celsius": null,
-  "force_fallback": false
-}
-```
-* **Response Body (200 OK):**
+### 3.1 목적지 장소 검색 (카카오 로컬 연동)
+* **엔드포인트:** `GET /api/places/search?q=강남역&size=5`
+* **설명:** 사용자가 입력한 목적지 검색어를 위경도 좌표 목록으로 변환합니다.
+* **Response (200 OK):**
 ```json
 {
   "status": 200,
   "data": {
-    "weather": {
-      "temperature": -5.0,
-      "is_fallback": false,
-      "description": "기상청 단기예보 연동 성공 (출발 시각 내일 오전 10:00 기준)"
-    },
-    "navigation": {
-      "distance_km": 86.0,
-      "elevation_gain_m": 640.0,
-      "estimated_duration_min": 85,
-      "is_fallback": false
-    },
-    "breakdown": {
-      "base_driving_kwh": 15.93,
-      "elevation_kwh": 4.29,
-      "temperature_efficiency_factor": 0.812,
-      "efficiency_loss_percent": 18.8,
-      "cold_start_hvac_spike_kwh": 3.2,
-      "pure_return_kwh": 28.1
-    },
-    "recommendations": {
-      "MAX": {
-        "mode": "MAX",
-        "mode_name_kr": "안심",
-        "reserve_soc_percent": 34.0,
-        "required_kwh": 37.39,
-        "v2l_usable_kwh": 20.9,
-        "v2l_usable_hours": 17.4,
-        "description": "여유를 넉넉히 확보 · 예측 오차와 추가 난방까지 완벽 방어"
-      },
-      "NORMAL": {
-        "mode": "NORMAL",
-        "mode_name_kr": "균형",
-        "reserve_soc_percent": 28.0,
-        "required_kwh": 33.52,
-        "v2l_usable_kwh": 25.54,
-        "v2l_usable_hours": 21.3,
-        "description": "주행 데이터 기준 설정 · 일반적인 귀가 환경에 최적화"
-      },
-      "SAFE": {
-        "mode": "SAFE",
-        "mode_name_kr": "최대 사용",
-        "reserve_soc_percent": 24.0,
-        "required_kwh": 30.42,
-        "v2l_usable_kwh": 28.64,
-        "v2l_usable_hours": 23.9,
-        "description": "V2L 사용을 우선 · 귀가 필수치만 남기고 전력 최대 활용"
+    "places": [
+      {
+        "name": "강남역 2호선",
+        "address": "서울 강남구 강남대로 지하 396",
+        "category": "지하철역",
+        "lat": 37.498086,
+        "lng": 127.028001
       }
-    }
+    ],
+    "is_fallback": false,
+    "source": "Kakao Local Keyword API"
   },
-  "message": "AI 귀가 전력 분석 및 3단계 안전 마진 추천이 완료되었습니다."
+  "message": "'강남역' 장소 검색 완료 (1건)"
 }
 ```
 
 ---
 
-### 3.2 V2L 안전 모니터링 세션 생성
+### 3.2 주변 전기차 충전소 탐색 (비상 연장용)
+* **엔드포인트:** `GET /api/chargers/nearby?lat=37.6242&lng=128.7420&radius_m=20000`
+* **설명:** 현재 차량 GPS 기준 반경 내 가장 가까운 실제 전기차 충전소를 거리순으로 조회합니다.
+* **Response (200 OK):**
+```json
+{
+  "status": 200,
+  "data": {
+    "chargers": [
+      {
+        "name": "강원강릉 감자원종장 전기차충전소",
+        "address": "강원특별자치도 강릉시 왕산면 안반데기길 11",
+        "distance_km": 3.1,
+        "lat": 37.610539,
+        "lng": 128.772583
+      }
+    ],
+    "is_fallback": false,
+    "source": "Kakao Local EV Charger Search"
+  },
+  "message": "주변 전기차 충전소 탐색 완료 (1건)"
+}
+```
+
+---
+
+### 3.3 차량 스펙 및 운전자 누적 전비 조회 / 수정
+* **조회:** `GET /api/user`
+* **수정:** `PUT /api/user`
+* **PUT Request Body:**
+```json
+{
+  "name": "캠퍼 드라이버",
+  "vehicle_model": "IONIQ 5 Long Range",
+  "battery_capacity": 77.4,
+  "curb_weight": 2010,
+  "avg_efficiency": 5.4
+}
+```
+
+---
+
+### 3.4 AI 배터리 소모량 예측 및 비례 가중치 3단계 마진 산출
+* **엔드포인트:** `POST /api/predict`
+* **설명:** 목적지/출발지 좌표와 출발 시각을 기반으로 기상·지형·전비 데이터를 실시간 융합하여 **순수 귀가 전력($E_{pure}$)**과 **비례 가중치 3단계 마진(`SAFE` x1.35 / `NORMAL` x1.15 / `MAX_USE` x1.00)**을 계산합니다.
+* **Request Body:** *(생략된 필드는 카카오 검색 · 기상청 · DB 값으로 자동 채움)*
+```json
+{
+  "destination_name": "강남역",
+  "origin_lat": 37.6242,
+  "origin_lng": 128.7420,
+  "dest_lat": null,
+  "dest_lng": null,
+  "distance_km": null,
+  "elevation_gain_m": null,
+  "departure_time": "내일 오전 10:00",
+  "passengers": 2,
+  "current_soc_percent": 61.0,
+  "expected_temp_celsius": null,
+  "v2l_current_load_kw": 1.2,
+  "force_fallback": false
+}
+```
+* **Response Body (200 OK - 실제 안반데기→강남역 190.6km / 6.0℃ 실연동 결과 예시):**
+```json
+{
+  "status": 200,
+  "data": {
+    "destination": {
+      "name": "강남역 2호선",
+      "origin_lat": 37.6242,
+      "origin_lng": 128.742,
+      "dest_lat": 37.498086,
+      "dest_lng": 127.028001
+    },
+    "vehicle": {
+      "vehicle_model": "IONIQ 5 Long Range",
+      "battery_capacity_kwh": 77.4,
+      "avg_efficiency_km_kwh": 5.4,
+      "curb_weight_kg": 2010.0
+    },
+    "weather": {
+      "temperature": 6.0,
+      "grid_nx": 90,
+      "grid_ny": 129,
+      "is_fallback": false,
+      "source": "KMA Short-term Forecast API (15084084)"
+    },
+    "navigation": {
+      "distance_km": 190.6,
+      "elevation_gain_m": 419.0,
+      "estimated_duration_min": 203,
+      "is_fallback": false,
+      "source": "Kakao Mobility Directions + Open-Meteo Elevation"
+    },
+    "is_fallback": false,
+    "breakdown": {
+      "base_driving_kwh": 35.3,
+      "elevation_kwh": 0.71,
+      "temperature_efficiency_factor": 0.902,
+      "efficiency_loss_percent": 9.8,
+      "cold_start_hvac_spike_kwh": 0.5,
+      "pure_return_kwh": 40.42,
+      "pure_return_soc_percent": 52.2
+    },
+    "recommendations": {
+      "SAFE": {
+        "mode": "SAFE",
+        "mode_name_kr": "안심",
+        "safety_multiplier": 1.35,
+        "reserve_soc_percent": 70.5,
+        "required_kwh": 54.57,
+        "v2l_usable_kwh": 0.0,
+        "v2l_usable_hours": 0.0,
+        "is_sufficient": false,
+        "description": "예측 전력의 +35% 여유 확보 · 폭설·정체·추가 난방까지 완벽 방어"
+      },
+      "NORMAL": {
+        "mode": "NORMAL",
+        "mode_name_kr": "균형",
+        "safety_multiplier": 1.15,
+        "reserve_soc_percent": 60.1,
+        "required_kwh": 46.52,
+        "v2l_usable_kwh": 0.69,
+        "v2l_usable_hours": 0.6,
+        "is_sufficient": true,
+        "description": "예측 전력의 +15% 여유 확보 · 주행 및 환경 변수를 고려한 표준 추천"
+      },
+      "MAX_USE": {
+        "mode": "MAX_USE",
+        "mode_name_kr": "최대 사용",
+        "safety_multiplier": 1.0,
+        "reserve_soc_percent": 52.2,
+        "required_kwh": 40.4,
+        "v2l_usable_kwh": 6.81,
+        "v2l_usable_hours": 5.7,
+        "is_sufficient": true,
+        "description": "귀가 최소 필수 전력만 보존 · V2L 가용 시간을 최대로 확보"
+      }
+    }
+  },
+  "message": "AI 귀가 전력 분석 및 비례 가중치 기반 3단계 안전 마진 추천이 완료되었습니다."
+}
+```
+
+---
+
+### 3.5 V2L 안전 모니터링 세션 생성
 * **엔드포인트:** `POST /api/sessions`
-* **설명:** 사용자가 선택한 마진 모드(예: 균형 28%)를 기반으로 실시간 V2L 안전 모니터링 세션을 시작합니다.
+* **설명:** 사용자가 선택한 마진 모드(`SAFE` | `NORMAL` | `MAX_USE`)와 예약 잔량을 DB에 기록하고 V2L 감시 세션을 시작합니다.
 * **Request Body:**
 ```json
 {
@@ -167,137 +257,47 @@ V2L 세이프 락커는 **외부 클라우드 API (기상/지형)**, **차량 �
   "departure_time": "내일 오전 10:00",
   "passengers": 2,
   "margin_mode": "NORMAL",
-  "target_soc": 28.0,
+  "target_soc": 32.3,
   "current_soc": 61.0,
   "current_v2l_load_kw": 1.2,
   "is_fallback": false
 }
 ```
-* **Response Body (200 OK):**
-```json
-{
-  "status": 200,
-  "data": {
-    "session_id": 1,
-    "destination_name": "우리 집 (서울 강남)",
-    "current_soc": 61.0,
-    "target_soc": 28.0,
-    "remaining_margin_pct": 33.0,
-    "current_v2l_load_kw": 1.2,
-    "estimated_hours_left": 21.3,
-    "v2l_status": "ACTIVE",
-    "relay_connected": true,
-    "utility_mode_active": false
-  },
-  "message": "V2L 안전 모니터링 세션이 활성화되었습니다."
-}
-```
 
 ---
 
-### 3.3 실시간 세션 상태 조회
+### 3.6 실시간 세션 상태 조회
 * **엔드포인트:** `GET /api/sessions/{session_id}`
-* **설명:** 인포테인먼트 대시보드에서 2초 간격(또는 웹소켓/폴링)으로 현재 SoC, 잔여 시간, 차단까지 남은 %p, 경고 알림 상태를 조회합니다.
-* **Response Body (200 OK):**
-```json
-{
-  "status": 200,
-  "data": {
-    "session_id": 1,
-    "current_soc": 61.0,
-    "target_soc": 28.0,
-    "remaining_margin_pct": 33.0,
-    "current_v2l_load_kw": 1.2,
-    "estimated_hours_left": 21.3,
-    "v2l_status": "ACTIVE",
-    "warning_level": null,
-    "relay_connected": true,
-    "utility_mode_active": false,
-    "destination_summary": {
-      "destination": "우리 집 (서울 강남)",
-      "departure": "내일 오전 10:00",
-      "distance_km": 86.0,
-      "elevation_gain_m": 640.0,
-      "temp_celsius": -5.0,
-      "margin_mode": "NORMAL"
-    }
-  },
-  "message": "세션 상태 조회 성공"
-}
-```
+* **설명:** 현재 배터리(`current_soc`), 목표(`target_soc`), 차단까지 남은 시간(`estimated_hours_left`), 상태(`ACTIVE` / `WARN_60M` / `WARN_30M` / `LOCKED_OUT`) 및 경고 단계(`warning_level`: `60` | `30` | `null`)를 반환합니다.
 
 ---
 
-### 3.4 시뮬레이션 가속 틱 (Simulation Tick)
+### 3.7 시뮬레이션 가속 틱 (Simulation Tick)
 * **엔드포인트:** `POST /api/sessions/{session_id}/tick`
-* **설명:** 심사위원 시연 및 데모 시 배터리를 인위적으로 감소시켜 **[정상 사용] -> [1시간 전 알림] -> [30분 전 알림] -> [락아웃 & 무시동 히터 가동]** 전 과정을 수초 내에 체감할 수 있도록 지원합니다.
-* **Request Body:**
-```json
-{
-  "soc_decrement": 2.0,
-  "load_kw": 1.5
-}
-```
-* **Response Body (200 OK):**
-```json
-{
-  "status": 200,
-  "data": {
-    "session_id": 1,
-    "current_soc": 29.5,
-    "target_soc": 28.0,
-    "remaining_margin_pct": 1.5,
-    "v2l_status": "WARN_30M",
-    "warning_level": 30,
-    "relay_connected": true,
-    "utility_mode_active": false
-  },
-  "message": "시뮬레이션 틱이 반영되었습니다. (30분 전 긴급 경고 도달)"
-}
-```
+* **Request Body:** `{"soc_decrement": 2.0, "load_kw": 1.5}`
+* **동작:** SoC 차감 후 잔여 가용 시간 ≤ 1.0시간이면 `WARN_60M`, ≤ 0.5시간이면 `WARN_30M`, `current_soc <= target_soc`이면 즉시 `LOCKED_OUT` + `relay_connected: false` + `utility_mode_active: true`로 상태 전이.
 
 ---
 
-### 3.5 [사용 연장] 비상 충전소 기반 스마트 재계산
+### 3.8 [사용 연장] 비상 충전소 기반 물리 엔진 재계산
 * **엔드포인트:** `POST /api/sessions/{session_id}/extend`
-* **설명:** 30분 전 알림에서 [사용 연장] 클릭 시 무제한 연장 대신 **인근 급속 충전소(12km)로 목적지를 자동 재설정하여 목표 배터리를 28%에서 16%로 하향 조정**, 안전하게 추가 가용 시간을 확보합니다.
 * **Request Body:**
 ```json
 {
-  "nearest_charger_name": "대관령 급속충전소",
-  "distance_km": 12.0,
+  "origin_lat": 37.6242,
+  "origin_lng": 128.7420,
+  "nearest_charger_name": null,
+  "distance_km": null,
   "elevation_gain_m": 80.0
 }
 ```
-* **Response Body (200 OK):**
-```json
-{
-  "status": 200,
-  "data": {
-    "session_id": 1,
-    "new_destination": "대관령 급속충전소 (비상 귀가)",
-    "previous_target_soc": 28.0,
-    "new_target_soc": 16.0,
-    "gained_soc_pct": 12.0,
-    "additional_hours": 7.7,
-    "v2l_status": "ACTIVE"
-  },
-  "message": "인근 급속충전소 기반으로 안전 마진이 재계산되어 V2L 사용 시간이 7.7시간 추가 연장되었습니다."
-}
-```
+* **동작:** `nearest_charger_name` 또는 `distance_km`가 `null`이면 카카오 로컬로 최단거리 전기차 충전소를 자동 탐색하고 카카오 길찾기/고도 API까지 반영해 `predict_v2l_lockout`으로 목표 SoC를 동적 재계산합니다(비상 보호 하한선 15.0%).
 
 ---
 
-### 3.6 V2L 하드웨어 차단 및 무시동 히터 자동 전환 (Lock-out)
+### 3.9 V2L 물리 차단 및 무시동 히터 페일세이프 (Lock-out)
 * **엔드포인트:** `POST /api/sessions/{session_id}/lockout`
-* **설명:** 배터리 목표치 도달(자동) 또는 사용자의 수동 차단 버튼 클릭 시, V2L 물리 릴레이를 차단하고 캠퍼 동사 방지를 위해 차량 내 무시동 히터(유틸리티 모드, 21℃)를 즉각 가동합니다.
-* **Request Body:**
-```json
-{
-  "reason": "TARGET_SOC_REACHED"
-}
-```
-* **Response Body (200 OK):**
+* **Response (200 OK):**
 ```json
 {
   "status": 200,
@@ -307,10 +307,11 @@ V2L 세이프 락커는 **외부 클라우드 API (기상/지형)**, **차량 �
     "relay_connected": false,
     "utility_mode_active": true,
     "cabin_target_temp_celsius": 21.0,
-    "bms_preserved_soc": 28.0,
-    "return_distance_guaranteed_km": 92.0
+    "bms_preserved_soc": 32.3,
+    "return_distance_guaranteed_km": 94.6
   },
-  "message": "안전을 위해 V2L이 정상 종료되었으며, 저체온증 방지를 위해 차량 무시동 히터가 21℃로 자동 가동되었습니다."
+  "message": "안전을 위해 V2L이 정상 차단되었으며, 동사 방지를 위해 차량 무시동 히터가 21℃로 가동되었습니다."
 }
 ```
+
 

@@ -11,6 +11,9 @@ V2L 및 차량 하드웨어 제어 시뮬레이션 서비스 (V2L Controller Ser
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from backend.app.db.models import V2LSession
+from backend.app.core.calculator import predict_v2l_lockout
+
+EMERGENCY_CHARGER_RESERVE_MIN_SOC = 15.0  # 거북이 모드(10%) + 비상 충전소 대기/우회 여유(5%)
 
 
 def update_session_soc(
@@ -100,16 +103,30 @@ def extend_v2l_session(
     elevation_gain_m: float,
 ) -> Dict[str, Any]:
     """
-    30분 전 알림에서 [사용 연장] 요청 시, 인근 급속 충전소 경로를 기준으로 목표치를 재계산하여
-    추가 가용 시간을 안전하게 확보합니다.
+    30분 전 알림에서 [사용 연장] 요청 시, 인근 급속 충전소 경로(실제 거리/고도/기온/차량 스펙)를
+    코어 예측 엔진(predict_v2l_lockout)으로 재계산해 안전하게 추가 가용 시간을 확보합니다.
     """
-    # 기존 목표(예: 28%)에서 비상 충전소 기준 목표(예: 16%)로 조정
     prev_target = session.target_soc
-    new_target = max(15.0, round(prev_target * 0.58, 1)) # 약 16% 수준으로 완화
-    gained_pct = round(prev_target - new_target, 1)
-
     battery_cap = session.user.battery_capacity if session.user else 77.4
+    avg_eff = session.user.avg_efficiency if session.user else 5.4
+    curb_wt = float(session.user.curb_weight) if session.user else 2010.0
     load_kw = session.current_v2l_load_kw or 1.2
+
+    charger_pred = predict_v2l_lockout(
+        current_soc_percent=session.current_soc,
+        battery_capacity_kwh=battery_cap,
+        distance_km=distance_km,
+        elevation_gain_m=elevation_gain_m,
+        expected_temp_celsius=session.expected_temp,
+        avg_efficiency_km_kwh=avg_eff,
+        curb_weight_kg=curb_wt,
+        passengers=session.passengers,
+        v2l_current_load_kw=load_kw,
+    )
+    dynamic_charger_soc = charger_pred["recommendations"]["NORMAL"]["reserve_soc_percent"]
+    new_target = round(min(prev_target, max(EMERGENCY_CHARGER_RESERVE_MIN_SOC, dynamic_charger_soc)), 1)
+    gained_pct = max(0.0, round(prev_target - new_target, 1))
+
     added_hours = round((gained_pct / 100.0 * battery_cap) / load_kw, 1)
 
     session.destination_name = f"{charger_name} (비상 충전소 경유)"
