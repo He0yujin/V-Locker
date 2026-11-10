@@ -83,3 +83,43 @@ class V2LSession(Base):
 
     user = relationship("User", back_populates="sessions")
 
+class FavoriteDestination(Base):
+    """사용자별 즐겨찾기 목적지"""
+    __tablename__ = "favorite_destinations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name = Column(String(100), nullable=False)
+    address = Column(String(255), nullable=True)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
+
+class V2LSessionEvent(Base):
+    """V2L 세션의 상태 및 설정 변경 이력"""
+    __tablename__ = "v2l_session_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(
+        Integer,
+        ForeignKey("v2l_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_type = Column(String(30), nullable=False)
+    previous_soc = Column(Float, nullable=True)
+    current_soc = Column(Float, nullable=True)
+    previous_target_soc = Column(Float, nullable=True)
+    new_target_soc = Column(Float, nullable=True)
+    description = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    session = relationship("V2LSession")
