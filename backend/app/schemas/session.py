@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Optional
+from typing import Generic, TypeVar, Optional, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
@@ -84,7 +84,10 @@ class CreateSessionRequest(BaseModel):
     expected_temp: float
     departure_time: str
     passengers: int = 2
-    margin_mode: str = Field(default="NORMAL", description="SAFE | NORMAL | MAX_USE")
+    margin_mode: Literal["SAFE", "NORMAL", "MAX_USE"] = Field(
+        default="NORMAL",
+        description="SAFE | NORMAL | MAX_USE"
+    )
     target_soc: float = Field(..., ge=10.0, le=95.0, description="예약 잔량 (%)")
     current_soc: float = Field(..., ge=0.0, le=100.0, description="현재 배터리 (%)")
     current_v2l_load_kw: float = Field(default=1.2, gt=0.1, description="현재 V2L 부하 (kW)")
