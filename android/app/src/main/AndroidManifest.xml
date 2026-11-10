@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Python FastAPI 백엔드 서버 통신 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- EV 배터리 잔량(SoC) 및 전비 조회 -->
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
+
+    <!-- 무시동 히터(HVAC) 상태 조회 및 제어 -->
+    <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VLocker"
+        android:usesCleartextTraffic="true">
+
+        <!-- CCP 조그 다이얼 미지원(터치 전용 앱) 선언 -->
+        <meta-data
+            android:name="com.hmg.rotary.ROTARY_SUPPORTED"
+            android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

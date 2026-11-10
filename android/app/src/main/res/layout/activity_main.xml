@@ -1,0 +1,1151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B111E"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <!-- 상단 고정 상태 바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#0F172A"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚡ V-Locker"
+            android:textColor="#38BDF8"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvConnectionBadge"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="초기화 중..."
+            android:textColor="#94A3B8"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVehicleSettings"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="12dp"
+            android:text="차량 설정"
+            android:textColor="#E2E8F0"
+            android:textSize="12sp"
+            app:cornerRadius="18dp"
+            app:strokeColor="#334155" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1E293B" />
+
+    <!-- 스크롤 가능한 메인 영역 -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 무중단 Fallback 안심 배너 (통신 지연/오류 시 자동 표시) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardFallbackBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#422006"
+                app:cardCornerRadius="12dp"
+                app:strokeColor="#F59E0B"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/tvFallbackMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp"
+                    android:text="⚠️ 네트워크 연결이 불안정하여 기본 안전 모드(-5.0℃, +640m 기준)로 배터리를 보호 중입니다."
+                    android:textColor="#FDE68A"
+                    android:textSize="13sp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 01: 귀가 경로 및 출발 설정                      -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/layoutScreen01"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. 귀가 경로 &amp; 출발 설정"
+                    android:textColor="#F8FAFC"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="14dp"
+                    android:text="내일 귀가할 목적지와 출발 조건을 입력하면 AI가 안전한 V2L 차단 잔량을 계산합니다."
+                    android:textColor="#94A3B8"
+                    android:textSize="13sp" />
+
+                <!-- 목적지 검색 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="귀가 목적지"
+                            android:textColor="#CBD5E1"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <EditText
+                                android:id="@+id/etDestination"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_weight="1"
+                                android:background="#0F172A"
+                                android:hint="예: 강남역, 대관령, 우리 집"
+                                android:imeOptions="actionSearch"
+                                android:inputType="text"
+                                android:paddingHorizontal="12dp"
+                                android:text="강남역"
+                                android:textColor="#FFFFFF"
+                                android:textColorHint="#64748B"
+                                android:textSize="14sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSearchPlaces"
+                                android:layout_width="wrap_content"
+                                android:layout_height="44dp"
+                                android:layout_marginStart="8dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="검색"
+                                android:textColor="#FFFFFF"
+                                app:backgroundTint="#1D4ED8"
+                                app:cornerRadius="10dp" />
+                        </LinearLayout>
+
+                        <!-- 검색 후보 결과 동적 목록 -->
+                        <LinearLayout
+                            android:id="@+id/layoutPlaceResults"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="#0F172A"
+                            android:orientation="vertical"
+                            android:padding="6dp"
+                            android:visibility="gone" />
+
+                        <!-- 원터치 숏컷 버튼 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnShortcutHome"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="🏠 우리 집"
+                                android:textColor="#E2E8F0"
+                                android:textSize="12sp"
+                                app:cornerRadius="10dp"
+                                app:strokeColor="#334155" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnShortcutCharger"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="⚡ 가까운 충전소"
+                                android:textColor="#E2E8F0"
+                                android:textSize="12sp"
+                                app:cornerRadius="10dp"
+                                app:strokeColor="#334155" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvSelectedDestCoords"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="출발지: 강릉 안반데기(차박지) · 목적지 자동 좌표 매핑"
+                            android:textColor="#38BDF8"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 출발 시각 & 탑승 인원 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="예상 출발 시각"
+                            android:textColor="#CBD5E1"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDepMorning07"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginEnd="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="오전 07:00"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#1E293B"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDepMorning10"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginHorizontal="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="오전 10:00"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#0284C7"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDepNoon12"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginStart="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="오후 12:00"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#1E293B"
+                                app:cornerRadius="10dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="탑승 인원 &amp; 적재 중량"
+                            android:textColor="#CBD5E1"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPass1"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginEnd="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="1인"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#1E293B"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPass2"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginHorizontal="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="2인 (기본)"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#0284C7"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPass4"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginStart="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="4인 패밀리"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#1E293B"
+                                app:cornerRadius="10dp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="현재 V2L 소비 전력 (kW)"
+                                android:textColor="#CBD5E1"
+                                android:textSize="13sp" />
+
+                            <EditText
+                                android:id="@+id/etV2lLoadKw"
+                                android:layout_width="90dp"
+                                android:layout_height="38dp"
+                                android:background="#0F172A"
+                                android:gravity="center"
+                                android:inputType="numberDecimal"
+                                android:text="1.2"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <CheckBox
+                            android:id="@+id/cbForceFallback"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:buttonTint="#F59E0B"
+                            android:text="네트워크 장애(Fallback) 강제 시뮬레이션"
+                            android:textColor="#FDE68A"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvScreen01SocInfo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="차량 배터리: 61.0% · 용량 77.4 kWh · 전비 5.4 km/kWh"
+                            android:textColor="#94A3B8"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <ProgressBar
+                    android:id="@+id/progressPredict"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="10dp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAnalyzeRoute"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="🔍 AI 귀가 경로 &amp; 배터리 분석하기"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#0284C7"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 02: AI 융합 분석 & 3단계 안전 마진 선택           -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/layoutScreen02"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnBackToScreen01"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="← 다시 입력"
+                        android:textColor="#CBD5E1"
+                        android:textSize="12sp"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="#334155" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="2. AI 분석 &amp; 안전 마진 선택"
+                        android:textColor="#F8FAFC"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- 분석 요약 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#1E40AF"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/tvPredictRouteSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="목적지 · 0.0 km"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvPredictEnvBadges"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="예상 기온 · 상승 고도"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvPredictBreakdown"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="주행 + 고도 + 콜드스타트 상세 산출 내역"
+                            android:textColor="#94A3B8"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 안심 모드 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardModeSafe"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="🛡️ 안심 모드 (SAFE · +35%)"
+                                android:textColor="#F8FAFC"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvSafeReserve"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="예약 --%"
+                                android:textColor="#38BDF8"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvSafeHours"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="V2L 가용 약 --시간"
+                            android:textColor="#34D399"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvSafeDesc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="#94A3B8"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 균형 추천 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardModeNormal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#162844"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#38BDF8"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="⚖️ 균형 추천 (NORMAL · +15%)"
+                                android:textColor="#FFFFFF"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvNormalReserve"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="예약 --%"
+                                android:textColor="#38BDF8"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvNormalHours"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="V2L 가용 약 --시간"
+                            android:textColor="#34D399"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvNormalDesc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="#CBD5E1"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 최대 사용 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardModeMax"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="⚡ 최대 사용 (MAX_USE · +0%)"
+                                android:textColor="#F8FAFC"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvMaxReserve"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="예약 --%"
+                                android:textColor="#38BDF8"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvMaxHours"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="V2L 가용 약 --시간"
+                            android:textColor="#34D399"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvMaxDesc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="#94A3B8"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:id="@+id/tvInsufficientWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:background="#450A0A"
+                    android:padding="10dp"
+                    android:text="⚠️ 현재 배터리가 선택한 안전 예약 잔량보다 낮습니다. 가까운 충전소로 설정하거나 시뮬레이션으로 확인하세요."
+                    android:textColor="#FCA5A5"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnStartMonitoring"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="✅ 이 기준으로 V2L 모니터링 시작"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#059669"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 03: 실시간 V2L 세이프 모니터링 대시보드           -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/layoutScreen03"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvMonitorStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#064E3B"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:text="● 현재 V2L 안전 사용 중 (ACTIVE)"
+                    android:textColor="#6EE7B7"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- 배터리 / 잔여 시간 메인 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="16dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvMonitorCurrentSoc"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="61.0%"
+                                android:textColor="#FFFFFF"
+                                android:textSize="38sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvMonitorTargetSoc"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_marginBottom="6dp"
+                                android:text="/ 안전 예약 잔량 28.0%"
+                                android:textColor="#38BDF8"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/progressMonitorSoc"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="14dp"
+                            android:layout_marginTop="10dp"
+                            android:max="100"
+                            android:progress="61"
+                            android:progressTint="#10B981" />
+
+                        <TextView
+                            android:id="@+id/tvMonitorMarginRemain"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="차단까지 남은 여유: 33.0%p"
+                            android:textColor="#E2E8F0"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/tvMonitorHoursLeft"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="남은 가용 시간: 약 15.2시간"
+                            android:textColor="#34D399"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvMonitorLoadKw"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="현재 V2L 소비 전력: 1.2 kW (최대 3.6 kW)"
+                            android:textColor="#94A3B8"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 귀가 조건 요약 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <TextView
+                        android:id="@+id/tvMonitorRouteDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lineSpacingExtra="4dp"
+                        android:padding="14dp"
+                        android:text="귀가 조건 요약 불러오는 중..."
+                        android:textColor="#CBD5E1"
+                        android:textSize="13sp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 시연용 배터리 차감 시뮬레이션 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#334155"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚡ V2L 사용 시연 컨트롤 (가속 테스트)"
+                            android:textColor="#FDE68A"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSimulateTick2"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_marginEnd="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="-2% 차감"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#334155"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSimulateTick10"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_marginHorizontal="4dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="-10% 급속"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                app:backgroundTint="#D97706"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnRefreshSession"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="4dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="새로고침"
+                                android:textColor="#CBD5E1"
+                                android:textSize="12sp"
+                                app:cornerRadius="10dp"
+                                app:strokeColor="#475569" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 하단 제어 버튼 (사용 연장 / 수동 차단) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnOpenExtend"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:text="🔌 사용 연장"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="#0284C7"
+                        app:cornerRadius="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnManualLockout"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="🛑 수동 V2L 차단"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="#DC2626"
+                        app:cornerRadius="12dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 04: V2L 안전 락아웃 & 무시동 히터 가동 완료        -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/layoutScreen04"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:cardBackgroundColor="#064E3B"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#10B981"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🛡️ V2L 안전 종료 및 무시동 히터 가동"
+                            android:textColor="#A7F3D0"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="안전 귀가를 위해 V2L 외부 전원이 차단되었으며, 동사 방지를 위해 차량 내부 무시동 히터(유틸리티 모드 21℃)가 자동 작동 중입니다."
+                            android:textColor="#ECFDF5"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 카드 1: BMS 안전 점검 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔋 1. BMS 귀가 배터리 보존"
+                            android:textColor="#38BDF8"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvLockoutBmsInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="배터리 보존 완료"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 카드 2: V2L 전원 릴레이 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔌 2. V2L 외부 전원 릴레이"
+                            android:textColor="#F87171"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvLockoutRelayInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="물리적 전원 공급 차단됨 (대기 누수 0W)"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 카드 3: 무시동 히터 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    app:cardBackgroundColor="#141D2F"
+                    app:cardCornerRadius="14dp"
+                    app:strokeColor="#26334D"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🌡️ 3. 무시동 히터 (유틸리티 모드)"
+                            android:textColor="#34D399"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvLockoutHvacInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="목표 온도 21.0℃ 유지 중"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/tvLockoutSdkLog"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:textColor="#94A3B8"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnResetToStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:text="🔄 처음으로 돌아가기 (새 세션)"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#1D4ED8"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
