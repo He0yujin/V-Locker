@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.db.database import Base, engine, SessionLocal
 from backend.app.db.models import User
+from backend.app.db import session_events
 from backend.app.api.routes import router
 
 # DB 테이블 생성
