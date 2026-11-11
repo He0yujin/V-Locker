@@ -18,23 +18,20 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope
-import com.example.Vlocker.network.ApiClient
-import com.example.Vlocker.network.CreateSessionRequest
-import com.example.Vlocker.network.ExtendRequest
+import com.example.Vlocker.network.BreakdownInfo
+import com.example.Vlocker.network.DestinationInfo
+import com.example.Vlocker.network.DestinationSummary
 import com.example.Vlocker.network.LockoutData
 import com.example.Vlocker.network.MarginRecommendation
+import com.example.Vlocker.network.NavigationInfo
 import com.example.Vlocker.network.PlaceItem
 import com.example.Vlocker.network.PredictData
-import com.example.Vlocker.network.PredictRequest
 import com.example.Vlocker.network.SessionStatusData
-import com.example.Vlocker.network.TickRequest
-import com.example.Vlocker.network.UserVehicleData
-import com.example.Vlocker.network.UserVehicleUpdateRequest
+import com.example.Vlocker.network.VehicleInfo
+import com.example.Vlocker.network.WeatherInfo
 import com.example.Vlocker.vehicle.PleosVehicleManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -49,6 +46,16 @@ class MainActivity : AppCompatActivity() {
 
     // 화면 컨테이너 (Screen 01 ~ 04)
     private lateinit var layoutScreen01: LinearLayout
+    private lateinit var layoutScreen00: LinearLayout
+    private lateinit var tvDashboardSoc: TextView
+    private lateinit var tvDashboardReserve: TextView
+    private lateinit var btnDashboardDestination: MaterialButton
+    private lateinit var btnHeaderSafety: MaterialButton
+    private lateinit var btnHeaderEnergy: MaterialButton
+    private lateinit var btnHeaderMonitor: MaterialButton
+    private lateinit var btnHeaderUtility: MaterialButton
+    private lateinit var layoutScreen05: LinearLayout
+    private lateinit var tvEnergyAnalysisSummary: TextView
     private lateinit var layoutScreen02: LinearLayout
     private lateinit var layoutScreen03: LinearLayout
     private lateinit var layoutScreen04: LinearLayout
@@ -106,6 +113,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnRefreshSession: MaterialButton
     private lateinit var btnOpenExtend: MaterialButton
     private lateinit var btnManualLockout: MaterialButton
+    private lateinit var btnDemoWarn60: MaterialButton
+    private lateinit var btnDemoWarn30: MaterialButton
+    private lateinit var btnDemoFallback: MaterialButton
 
     // Screen 04 뷰
     private lateinit var tvLockoutBmsInfo: TextView
@@ -115,9 +125,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnResetToStart: MaterialButton
 
     // 앱 상태 변수
-    private var currentScreenIndex: Int = 1
+    private var currentScreenIndex: Int = 0
     private var isPleosConnected: Boolean = false
-    private var currentServerUrl: String = "http://10.0.2.2:8000/"
 
     // 차량 / 센서 상태 (기본 IONIQ 5 Long Range)
     private var currentSocPercent: Double = 61.0
@@ -138,6 +147,7 @@ class MainActivity : AppCompatActivity() {
     private var lastPredictData: PredictData? = null
     private var selectedMarginMode: String = "NORMAL"
     private var activeSessionId: Int? = null
+    private var activeSessionStatus: SessionStatusData? = null
     private var lastShownWarningLevel: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,8 +166,8 @@ class MainActivity : AppCompatActivity() {
         // Pleos App Market 규격: Back 버튼으로 앱을 finish()하지 않고 백그라운드로 이동
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (currentScreenIndex == 2) {
-                    showScreen(1)
+                if (currentScreenIndex != 0) {
+                    showScreen(0)
                 } else {
                     moveTaskToBack(true)
                 }
@@ -165,13 +175,19 @@ class MainActivity : AppCompatActivity() {
         })
 
         bindViews()
+        installDashboardScreen()
         setupListeners()
         initVehicleAndBackend()
+        showScreen(0)
     }
 
     private fun bindViews() {
         tvConnectionBadge = findViewById(R.id.tvConnectionBadge)
         btnVehicleSettings = findViewById(R.id.btnVehicleSettings)
+        btnHeaderSafety = findViewById(R.id.btnHeaderSafety)
+        btnHeaderEnergy = findViewById(R.id.btnHeaderEnergy)
+        btnHeaderMonitor = findViewById(R.id.btnHeaderMonitor)
+        btnHeaderUtility = findViewById(R.id.btnHeaderUtility)
         cardFallbackBanner = findViewById(R.id.cardFallbackBanner)
         tvFallbackMessage = findViewById(R.id.tvFallbackMessage)
 
@@ -230,6 +246,9 @@ class MainActivity : AppCompatActivity() {
         btnRefreshSession = findViewById(R.id.btnRefreshSession)
         btnOpenExtend = findViewById(R.id.btnOpenExtend)
         btnManualLockout = findViewById(R.id.btnManualLockout)
+        btnDemoWarn60 = findViewById(R.id.btnDemoWarn60)
+        btnDemoWarn30 = findViewById(R.id.btnDemoWarn30)
+        btnDemoFallback = findViewById(R.id.btnDemoFallback)
 
         tvLockoutBmsInfo = findViewById(R.id.tvLockoutBmsInfo)
         tvLockoutRelayInfo = findViewById(R.id.tvLockoutRelayInfo)
@@ -240,6 +259,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         btnVehicleSettings.setOnClickListener { showVehicleSettingsDialog() }
+        btnHeaderSafety.setOnClickListener {
+            if (lastPredictData == null) {
+                lastPredictData = makeDemoPrediction(etDestination.text.toString().ifBlank { "우리 집" }, false)
+                renderPredictResult(lastPredictData!!)
+            }
+            showScreen(2)
+        }
+        btnHeaderEnergy.setOnClickListener { showEnergyAnalysisDialog() }
+        btnHeaderMonitor.setOnClickListener {
+            if (activeSessionStatus != null) showScreen(3) else {
+                if (lastPredictData == null) lastPredictData = makeDemoPrediction(etDestination.text.toString().ifBlank { "우리 집" }, false)
+                if (lastPredictData?.recommendations?.get(selectedMarginMode) != null) startMonitoringSession()
+            }
+        }
+        btnHeaderUtility.setOnClickListener { showScreen(4) }
+
+        btnDemoWarn60.setOnClickListener { showWarn60mDialog() }
+        btnDemoWarn30.setOnClickListener { showWarn30mDialog() }
+        btnDemoFallback.setOnClickListener {
+            renderFallbackBanner(true)
+            AlertDialog.Builder(this)
+                .setTitle("기본 안전 모드 보호 중")
+                .setMessage("네트워크 연결이 불안정해도 현재 설정된 안전 예약 잔량으로 배터리를 보호합니다.")
+                .setPositiveButton("확인", null)
+                .show()
+        }
 
         // Screen 01: 목적지 검색 & 숏컷
         btnSearchPlaces.setOnClickListener { searchPlacesFromBackend() }
@@ -286,8 +331,162 @@ class MainActivity : AppCompatActivity() {
             activeSessionId = null
             lastShownWarningLevel = null
             cardFallbackBanner.visibility = View.GONE
-            showScreen(1)
+            showScreen(0)
         }
+    }
+
+    /** Keeps the route form as the existing setup step while opening the app on a compact dashboard. */
+    private fun installDashboardScreen() {
+        val content = layoutScreen01.parent as? LinearLayout ?: return
+        val dashboard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(4, 4, 4, 18)
+            setBackgroundColor(Color.parseColor("#0B111E"))
+        }
+        layoutScreen00 = dashboard
+
+        fun label(value: String, size: Float, color: String, bold: Boolean = false) = TextView(this).apply {
+            text = value
+            textSize = size
+            setTextColor(Color.parseColor(color))
+            if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        fun action(text: String, color: String, onClick: () -> Unit) = MaterialButton(this).apply {
+            this.text = text
+            setTextColor(Color.WHITE)
+            backgroundTintList = ColorStateList.valueOf(Color.parseColor(color))
+            cornerRadius = 14
+            setOnClickListener { onClick() }
+        }
+        fun card(title: String, value: String): MaterialCardView {
+            val inner = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(18, 16, 18, 16)
+                addView(label(title, 13f, "#A9BBB3"))
+                val valueView = label(value, 24f, "#F1F6F2", true)
+                if (title == "현재 배터리") tvDashboardSoc = valueView else tvDashboardReserve = valueView
+                addView(valueView)
+            }
+            return MaterialCardView(this).apply {
+                radius = 18f
+                setCardBackgroundColor(Color.parseColor("#182422"))
+                strokeColor = Color.parseColor("#33433D")
+                strokeWidth = 1
+                addView(inner)
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = 8 }
+            }
+        }
+
+        dashboard.addView(label("V-Locker", 13f, "#6EDAC1", true))
+        dashboard.addView(label("오늘의 캠핑, 안전하게 준비하세요", 25f, "#F1F6F2", true).apply {
+            setPadding(0, 10, 0, 4)
+        })
+        dashboard.addView(label("현재 배터리와 귀가 계획을 한눈에 확인하세요.", 14f, "#A9BBB3").apply {
+            setPadding(0, 0, 0, 18)
+        })
+
+        val metrics = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        metrics.addView(card("현재 배터리", String.format(Locale.US, "%.0f%%", currentSocPercent)))
+        metrics.addView(card("귀가 예약 잔량", "계획 없음").apply { layoutParams = LinearLayout.LayoutParams(0, -2, 1f) })
+        dashboard.addView(metrics)
+
+        btnDashboardDestination = action("⌕   목적지 검색   ·   ${etDestination.text}", "#22322F") {
+            showDestinationSearchDialog()
+        }.apply { setPadding(8, 0, 8, 0) }
+        dashboard.addView(btnDashboardDestination)
+        dashboard.addView(action("귀가 예약 잔량 선택하기", "#087F70") {
+            if (lastPredictData != null) showScreen(2) else analyzeReturnRoute()
+        }.apply { layoutParams = LinearLayout.LayoutParams(-1, 58).apply { topMargin = 10; bottomMargin = 12 } })
+
+        content.addView(dashboard, content.indexOfChild(layoutScreen01))
+
+        layoutScreen05 = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setPadding(4, 8, 4, 18)
+            addView(label("에너지 분석", 25f, "#F1F6F2", true))
+            addView(label("귀가 주행과 V2L 사용에 필요한 전력을 확인하세요.", 14f, "#A9BBB3").apply {
+                setPadding(0, 6, 0, 16)
+            })
+            tvEnergyAnalysisSummary = label("경로 분석 후 에너지 사용량을 표시합니다.", 16f, "#E2E8F0")
+            setPadding(4, 8, 4, 18)
+            addView(tvEnergyAnalysisSummary)
+            addView(action("메인 대시보드", "#087F70") { showScreen(0) })
+        }
+        content.addView(layoutScreen05)
+    }
+
+    private fun showDestinationSearchDialog() {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(28, 12, 28, 8)
+        }
+        val query = EditText(this).apply {
+            setSingleLine(true)
+            hint = "목적지를 검색하세요"
+            setText(etDestination.text)
+        }
+        val results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val home = MaterialButton(this).apply { text = "우리 집" }
+        val charger = MaterialButton(this).apply { text = "가까운 급속 충전소" }
+        shortcuts.addView(home, LinearLayout.LayoutParams(0, -2, 1f))
+        shortcuts.addView(charger, LinearLayout.LayoutParams(0, -2, 1f))
+        panel.addView(query)
+        panel.addView(shortcuts)
+        panel.addView(results)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("목적지 검색")
+            .setView(panel)
+            .setNegativeButton("닫기", null)
+            .create()
+
+        fun choose(name: String, lat: Double?, lng: Double?) {
+            etDestination.setText(name)
+            selectedDestLat = lat
+            selectedDestLng = lng
+            lastPredictData = null
+            tvSelectedDestCoords.text = "선택: $name"
+            if (::tvDashboardReserve.isInitialized) tvDashboardReserve.text = "계획 없음"
+            if (::btnDashboardDestination.isInitialized) btnDashboardDestination.text = "⌕   목적지 검색   ·   $name"
+            dialog.dismiss()
+        }
+        home.setOnClickListener { choose("우리 집", 37.4979, 127.0276) }
+        charger.setOnClickListener {
+            choose("가까운 급속 충전소", 37.5665, 126.9780)
+        }
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "검색", null)
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val keyword = query.text.toString().trim()
+            if (keyword.isEmpty()) return@setOnClickListener
+            results.removeAllViews()
+            listOf(
+                PlaceItem(keyword, "검색한 목적지 · 시연 데이터", null, 37.5665, 126.9780),
+                PlaceItem("${keyword} 근처", "추천 목적지 · 시연 데이터", null, 37.5700, 126.9820)
+            ).forEach { place ->
+                val row = TextView(this@MainActivity).apply {
+                    text = "📍 ${place.name}\n${place.address}"
+                    textSize = 14f
+                    setTextColor(Color.WHITE)
+                    setPadding(12, 14, 12, 14)
+                    setOnClickListener { choose(place.name, place.lat, place.lng) }
+                }
+                results.addView(row)
+            }
+        }
+    }
+
+    private fun showEnergyAnalysisDialog() {
+        val breakdown = lastPredictData?.breakdown
+        tvEnergyAnalysisSummary.text = if (breakdown == null) "경로 분석 후 에너지 사용량을 표시합니다." else String.format(
+            Locale.US,
+            "목적지: %s\n\n귀가 주행 전력  %.2f kWh\n고도 회생 전력  %.2f kWh\n난방 예상 전력  %.2f kWh\n귀가 필수 잔량  %.1f%%",
+            lastPredictData?.destination?.name.orEmpty(),
+            breakdown.baseDrivingKwh, breakdown.elevationKwh, breakdown.coldStartHvacSpikeKwh,
+            breakdown.pureReturnSocPercent
+        )
+        showScreen(5)
     }
 
     private fun initVehicleAndBackend() {
@@ -306,30 +505,9 @@ class MainActivity : AppCompatActivity() {
                 currentSocPercent = soc
                 userAvgEfficiency = eff
                 updateVehicleSummaryUI()
-                fetchUserProfileFromBackend()
+                updateVehicleSummaryUI("로컬 시연 데이터")
             }
         }
-    }
-
-    private fun fetchUserProfileFromBackend() {
-        lifecycleScope.launch {
-            runCatching { ApiClient.service.getUserVehicle() }
-                .onSuccess { res ->
-                    res.data?.let { applyUserVehicle(it) }
-                    updateVehicleSummaryUI("백엔드 연결됨")
-                }
-                .onFailure {
-                    updateVehicleSummaryUI("백엔드 미연결 (차량 설정 확인)")
-                }
-        }
-    }
-
-    private fun applyUserVehicle(data: UserVehicleData) {
-        userVehicleModel = data.vehicleModel
-        userBatteryCapacity = data.batteryCapacity
-        userCurbWeight = data.curbWeight
-        userAvgEfficiency = data.avgEfficiency
-        updateVehicleSummaryUI()
     }
 
     private fun updateVehicleSummaryUI(backendNote: String? = null) {
@@ -342,6 +520,17 @@ class MainActivity : AppCompatActivity() {
             "차량(%s): 배터리 %.1f%% · 용량 %.1f kWh · 전비 %.1f km/kWh",
             userVehicleModel, currentSocPercent, userBatteryCapacity, userAvgEfficiency
         )
+        if (::tvDashboardSoc.isInitialized) {
+            tvDashboardSoc.text = String.format(Locale.US, "%.0f%%", currentSocPercent)
+        }
+        if (::tvDashboardReserve.isInitialized) {
+            tvDashboardReserve.text = lastPredictData?.recommendations?.get(selectedMarginMode)?.let {
+                String.format(Locale.US, "%.1f%%", it.reserveSocPercent)
+            } ?: "계획 없음"
+        }
+        if (::btnDashboardDestination.isInitialized) {
+            btnDashboardDestination.text = "⌕   목적지 검색   ·   ${etDestination.text}"
+        }
     }
 
     // =========================================================
@@ -354,21 +543,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        lifecycleScope.launch {
-            btnSearchPlaces.isEnabled = false
-            runCatching { ApiClient.service.searchPlaces(keyword, 5) }
-                .onSuccess { res ->
-                    val places = res.data?.places.orEmpty()
-                    renderPlaceResults(places)
-                    if (places.isEmpty()) {
-                        toast("검색 결과가 없습니다. 직접 [분석하기]를 눌러 기본 매핑을 사용할 수 있습니다.")
-                    }
-                }
-                .onFailure { e ->
-                    toast("장소 검색 실패: ${e.message}")
-                }
-            btnSearchPlaces.isEnabled = true
-        }
+        renderPlaceResults(listOf(
+            PlaceItem(keyword, "검색한 목적지 · 시연 데이터", null, 37.5665, 126.9780),
+            PlaceItem("${keyword} 근처", "추천 목적지 · 시연 데이터", null, 37.5700, 126.9820)
+        ))
     }
 
     private fun renderPlaceResults(places: List<PlaceItem>) {
@@ -402,30 +580,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun findNearestChargerShortcut() {
-        lifecycleScope.launch {
-            btnShortcutCharger.isEnabled = false
-            runCatching { ApiClient.service.searchNearbyChargers(originLat, originLng) }
-                .onSuccess { res ->
-                    val charger = res.data?.chargers?.firstOrNull()
-                    if (charger != null) {
-                        etDestination.setText(charger.name)
-                        selectedDestLat = charger.lat
-                        selectedDestLng = charger.lng
-                        layoutPlaceResults.visibility = View.GONE
-                        tvSelectedDestCoords.text = String.format(
-                            Locale.US,
-                            "최근접 충전소: %s (직선 %.1f km)",
-                            charger.name, charger.distanceKm
-                        )
-                    } else {
-                        toast("주변 충전소 정보를 불러오지 못했습니다.")
-                    }
-                }
-                .onFailure { e ->
-                    toast("충전소 검색 실패: ${e.message}")
-                }
-            btnShortcutCharger.isEnabled = true
-        }
+        etDestination.setText("가까운 급속 충전소")
+        selectedDestLat = 37.5665
+        selectedDestLng = 126.9780
+        layoutPlaceResults.visibility = View.GONE
+        tvSelectedDestCoords.text = "선택: 가까운 급속 충전소 · 시연용 위치"
     }
 
     private fun selectDepartureTime(label: String) {
@@ -452,46 +611,46 @@ class MainActivity : AppCompatActivity() {
 
     private fun analyzeReturnRoute() {
         val destName = etDestination.text.toString().trim().ifEmpty { "강남역" }
-        val loadKw = readLoadKw()
-        val forceFallback = cbForceFallback.isChecked
+        val data = makeDemoPrediction(destName, cbForceFallback.isChecked)
+        lastPredictData = data
+        renderFallbackBanner(data.isFallback)
+        renderPredictResult(data)
+        showScreen(2)
+    }
 
-        val request = PredictRequest(
-            destinationName = destName,
-            originLat = originLat,
-            originLng = originLng,
-            destLat = selectedDestLat,
-            destLng = selectedDestLng,
-            departureTime = selectedDepartureTime,
-            passengers = selectedPassengers,
-            currentSocPercent = currentSocPercent,
-            avgEfficiencyKmKwh = userAvgEfficiency,
-            batteryCapacityKwh = userBatteryCapacity,
-            curbWeightKg = userCurbWeight.toDouble(),
-            v2lCurrentLoadKw = loadKw,
-            forceFallback = forceFallback
-        )
-
-        lifecycleScope.launch {
-            progressPredict.visibility = View.VISIBLE
-            btnAnalyzeRoute.isEnabled = false
-            runCatching { ApiClient.service.predictConsumption(request) }
-                .onSuccess { res ->
-                    val data = res.data
-                    if (data != null) {
-                        lastPredictData = data
-                        renderFallbackBanner(data.isFallback)
-                        renderPredictResult(data)
-                        showScreen(2)
-                    } else {
-                        toast("예측 데이터가 비어 있습니다.")
-                    }
-                }
-                .onFailure { e ->
-                    toast("서버 통신 실패 (FastAPI 실행 여부 확인): ${e.message}")
-                }
-            progressPredict.visibility = View.GONE
-            btnAnalyzeRoute.isEnabled = true
+    private fun makeDemoPrediction(destination: String, fallback: Boolean): PredictData {
+        val distanceKm = when {
+            destination.contains("충전소") -> 18.0
+            destination.contains("집") -> 86.0
+            else -> 42.0
         }
+        val routeKwh = distanceKm / userAvgEfficiency
+        val requiredKwh = routeKwh + 1.5
+        val requiredSoc = requiredKwh / userBatteryCapacity * 100.0
+        fun option(mode: String, label: String, reserve: Double, multiplier: Double, hours: Double, description: String) =
+            MarginRecommendation(
+                mode = mode, modeNameKr = label, safetyMultiplier = multiplier,
+                reserveSocPercent = reserve, requiredKwh = requiredKwh,
+                v2lUsableKwh = ((currentSocPercent - reserve).coerceAtLeast(0.0) * userBatteryCapacity / 100.0),
+                v2lUsableHours = hours, isSufficient = currentSocPercent >= reserve,
+                description = description
+            )
+        val recommendations = mapOf(
+            "SAFE" to option("SAFE", "안심", 34.0, 1.5, 5.1, "배터리 잔여량을 넉넉히 남겨 귀가 여유를 확보합니다."),
+            "NORMAL" to option("NORMAL", "균형", 28.0, 1.25, 6.7, "귀가 여유와 V2L 사용 시간을 균형 있게 맞춥니다."),
+            "MAX_USE" to option("MAX_USE", "최대 사용", 24.0, 1.1, 7.8, "귀가에 필요한 잔량을 남기고 V2L을 더 오래 사용합니다.")
+        )
+        return PredictData(
+            destination = DestinationInfo(destination, originLat, originLng,
+                selectedDestLat ?: 37.5665, selectedDestLng ?: 126.9780),
+            vehicle = VehicleInfo(userVehicleModel, userBatteryCapacity, userAvgEfficiency, userCurbWeight.toDouble()),
+            weather = WeatherInfo(-5.0, isFallback = fallback, source = "시연 데이터", description = "겨울철 예시"),
+            navigation = NavigationInfo(distanceKm, 640.0, (distanceKm / 45.0 * 60).toInt(), fallback,
+                "시연 데이터", "경로 분석 예시"),
+            isFallback = fallback,
+            breakdown = BreakdownInfo(routeKwh, -2.4, 1.15, 10.0, 1.5, requiredKwh, requiredSoc),
+            recommendations = recommendations
+        )
     }
 
     // =========================================================
@@ -568,6 +727,9 @@ class MainActivity : AppCompatActivity() {
         val selectedRec = lastPredictData?.recommendations?.get(mode)
         tvInsufficientWarning.visibility =
             if (selectedRec != null && !selectedRec.isSufficient) View.VISIBLE else View.GONE
+        if (::tvDashboardReserve.isInitialized) {
+            tvDashboardReserve.text = selectedRec?.let { String.format(Locale.US, "%.1f%%", it.reserveSocPercent) } ?: "계획 없음"
+        }
     }
 
     private fun highlightMarginCard(card: MaterialCardView, selected: Boolean) {
@@ -583,75 +745,60 @@ class MainActivity : AppCompatActivity() {
     private fun startMonitoringSession() {
         val predict = lastPredictData ?: return
         val rec = predict.recommendations[selectedMarginMode] ?: return
-
-        val req = CreateSessionRequest(
+        activeSessionId = (activeSessionId ?: 0) + 1
+        lastShownWarningLevel = null
+        activeSessionStatus = SessionStatusData(
+            sessionId = activeSessionId!!,
             destinationName = predict.destination.name,
-            distanceKm = predict.navigation.distanceKm,
-            elevationGainM = predict.navigation.elevationGainM,
-            expectedTemp = predict.weather.temperature,
-            departureTime = selectedDepartureTime,
-            passengers = selectedPassengers,
-            marginMode = selectedMarginMode,
-            targetSoc = rec.reserveSocPercent,
             currentSoc = currentSocPercent,
+            targetSoc = rec.reserveSocPercent,
+            remainingMarginPct = currentSocPercent - rec.reserveSocPercent,
             currentV2lLoadKw = readLoadKw(),
-            isFallback = predict.isFallback
+            estimatedHoursLeft = rec.v2lUsableHours,
+            v2lStatus = "ACTIVE",
+            warningLevel = null,
+            relayConnected = true,
+            utilityModeActive = false,
+            isFallback = predict.isFallback,
+            destinationSummary = DestinationSummary(
+                predict.destination.name, selectedDepartureTime, predict.navigation.distanceKm,
+                predict.navigation.elevationGainM, predict.weather.temperature,
+                when (selectedMarginMode) { "SAFE" -> "안심"; "MAX_USE" -> "최대 사용"; else -> "균형" }
+            )
         )
-
-        lifecycleScope.launch {
-            btnStartMonitoring.isEnabled = false
-            runCatching { ApiClient.service.createSession(req) }
-                .onSuccess { res ->
-                    val session = res.data
-                    if (session != null) {
-                        activeSessionId = session.sessionId
-                        lastShownWarningLevel = null
-                        renderSessionDashboard(session)
-                        showScreen(3)
-                    }
-                }
-                .onFailure { e ->
-                    toast("모니터링 세션 시작 실패: ${e.message}")
-                }
-            btnStartMonitoring.isEnabled = true
-        }
+        renderSessionDashboard(activeSessionStatus!!)
+        showScreen(3)
     }
 
     // =========================================================
     // Screen 03 모니터링 & 경고 & 연장
     // =========================================================
     private fun simulateSessionTick(decrementPct: Double) {
-        val sessionId = activeSessionId ?: return
-        lifecycleScope.launch {
-            runCatching {
-                ApiClient.service.tickSession(
-                    sessionId,
-                    TickRequest(socDecrement = decrementPct, loadKw = readLoadKw())
-                )
-            }.onSuccess { res ->
-                val session = res.data ?: return@onSuccess
-                handleSessionTransition(session)
-            }.onFailure { e ->
-                toast("시뮬레이션 틱 실패: ${e.message}")
-            }
+        val session = activeSessionStatus ?: return
+        currentSocPercent = (session.currentSoc - decrementPct).coerceAtLeast(session.targetSoc)
+        val margin = currentSocPercent - session.targetSoc
+        val status = when {
+            margin <= 0.5 -> "LOCKED_OUT"
+            margin <= 2.0 -> "WARN_30M"
+            margin <= 5.0 -> "WARN_60M"
+            else -> "ACTIVE"
         }
+        handleSessionTransition(session.copy(
+            currentSoc = currentSocPercent,
+            remainingMarginPct = margin,
+            estimatedHoursLeft = (margin / 5.0).coerceAtLeast(0.0),
+            currentV2lLoadKw = readLoadKw(),
+            v2lStatus = status,
+            warningLevel = when (status) { "WARN_30M" -> 30; "WARN_60M" -> 60; else -> null }
+        ))
     }
 
     private fun refreshActiveSession() {
-        val sessionId = activeSessionId ?: return
-        lifecycleScope.launch {
-            runCatching { ApiClient.service.getSessionStatus(sessionId) }
-                .onSuccess { res ->
-                    val session = res.data ?: return@onSuccess
-                    handleSessionTransition(session)
-                }
-                .onFailure { e ->
-                    toast("상태 새로고침 실패: ${e.message}")
-                }
-        }
+        activeSessionStatus?.let { renderSessionDashboard(it) }
     }
 
     private fun handleSessionTransition(session: SessionStatusData) {
+        activeSessionStatus = session
         currentSocPercent = session.currentSoc
         updateVehicleSummaryUI()
         renderSessionDashboard(session)
@@ -728,15 +875,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun showWarn60mDialog() {
         AlertDialog.Builder(this)
-            .setTitle("⚠️ 전원 공급 종료 1시간 전 안내")
-            .setMessage("귀가 배터리 보호를 위해 약 1시간 후 V2L 전원 공급이 종료됩니다.\n차단 즉시 차량 내부 무시동 히터(21℃)가 자동으로 가동됩니다.")
+            .setTitle("⚠️ 차단 1시간 전 안내")
+            .setMessage("귀가 예약 잔량에 도달하기까지 약 1시간 남았습니다.\n차량 배터리와 남은 사용 시간을 확인해 주세요.")
             .setPositiveButton("확인", null)
             .show()
     }
 
     private fun showWarn30mDialog() {
         AlertDialog.Builder(this)
-            .setTitle("🚨 전원 공급 종료 30분 전 긴급 알림")
+            .setTitle("🚨 차단 30분 전 긴급 알림")
             .setMessage("곧 목표 예약 잔량에 도달하여 V2L 전원이 안전 차단됩니다.\n인근 급속 충전소 경유로 마진을 재계산해 사용을 연장하시겠습니까?")
             .setPositiveButton("사용 연장 (충전소 탐색)") { _, _ -> showExtendConfirmDialog() }
             .setNegativeButton("확인", null)
@@ -744,28 +891,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showExtendConfirmDialog() {
-        val sessionId = activeSessionId ?: return
+        val session = activeSessionStatus ?: return
         AlertDialog.Builder(this)
             .setTitle("🔌 V2L 사용 연장 (인근 급속충전소 재계산)")
             .setMessage("인근 급속 충전소 경로를 기준으로 안전 마진을 다시 계산하여 V2L 가용 시간을 연장할까요?")
             .setPositiveButton("연장 적용") { _, _ ->
-                lifecycleScope.launch {
-                    runCatching {
-                        ApiClient.service.extendSession(
-                            sessionId,
-                            ExtendRequest(originLat = originLat, originLng = originLng)
-                        )
-                    }.onSuccess { res ->
-                        val ext = res.data
-                        if (ext != null) {
-                            lastShownWarningLevel = null
-                            toast("${ext.newDestination}: 목표 ${ext.newTargetSoc}%로 변경 (+${ext.additionalHours}시간 연장)")
-                            refreshActiveSession()
-                        }
-                    }.onFailure { e ->
-                        toast("사용 연장 실패: ${e.message}")
-                    }
-                }
+                val newTarget = (session.targetSoc - 4.0).coerceAtLeast(18.0)
+                activeSessionStatus = session.copy(
+                    destinationName = "가까운 급속 충전소 경유",
+                    destinationSummary = session.destinationSummary?.copy(
+                        destination = "가까운 급속 충전소 경유",
+                        distanceKm = 18.0,
+                        marginMode = "충전소 재계산"
+                    ),
+                    targetSoc = newTarget,
+                    remainingMarginPct = session.currentSoc - newTarget,
+                    estimatedHoursLeft = session.estimatedHoursLeft + 2.0
+                )
+                lastShownWarningLevel = null
+                activeSessionStatus?.let { renderSessionDashboard(it) }
+                toast("시연 데이터 기준으로 목표 잔량을 ${newTarget}%로 조정했습니다.")
             }
             .setNegativeButton("취소", null)
             .show()
@@ -774,8 +919,8 @@ class MainActivity : AppCompatActivity() {
     private fun showManualLockoutConfirmDialog() {
         val sessionId = activeSessionId ?: return
         AlertDialog.Builder(this)
-            .setTitle("🛑 수동 V2L 차단 확인")
-            .setMessage("외부 전원 공급을 지금 즉시 차단하시겠습니까?\n차단과 동시에 체온 유지를 위해 차량 무시동 히터(21℃)가 가동됩니다.")
+            .setTitle("V2L 차단 확인 팝업 - 수동")
+            .setMessage("V2L 전원을 차단하고 귀가 예약 잔량을 보존할까요?\n차단 후에는 차량 유틸리티 화면에서 BMS 잔량과 난방 상태를 확인할 수 있습니다.")
             .setNegativeButton("취소 (계속 사용)", null)
             .setPositiveButton("즉시 전원 차단") { _, _ -> triggerFinalLockoutSequence(sessionId) }
             .show()
@@ -785,36 +930,32 @@ class MainActivity : AppCompatActivity() {
     // Screen 04 락아웃 & Pleos HVAC 21℃ 가동
     // =========================================================
     private fun triggerFinalLockoutSequence(sessionId: Int) {
-        lifecycleScope.launch {
-            runCatching { ApiClient.service.lockoutSession(sessionId) }
-                .onSuccess { res ->
-                    val lockout = res.data ?: return@onSuccess
-                    executeHardwareAndShowScreen04(lockout)
-                }
-                .onFailure { e ->
-                    toast("차단 API 호출 실패: ${e.message}")
-                }
-        }
+        val session = activeSessionStatus ?: return
+        val lockout = LockoutData(
+            sessionId = sessionId,
+            v2lStatus = "LOCKED_OUT",
+            relayConnected = false,
+            utilityModeActive = true,
+            cabinTargetTempCelsius = 21.0,
+            bmsPreservedSoc = session.targetSoc,
+            returnDistanceGuaranteedKm = session.targetSoc * userAvgEfficiency
+        )
+        activeSessionStatus = session.copy(v2lStatus = "LOCKED_OUT", utilityModeActive = true)
+        executeHardwareAndShowScreen04(lockout)
     }
 
     private fun executeHardwareAndShowScreen04(lockout: LockoutData) {
-        vehicleManager.triggerEmergencyLockoutAndHeater(lockout.cabinTargetTempCelsius.toFloat()) { relayOk, hvacOk, detail ->
-            tvLockoutBmsInfo.text = String.format(
-                Locale.US,
-                "배터리 %.1f%% 안전 보존 완료 · 귀가 보장 거리: 약 %.1f km",
-                lockout.bmsPreservedSoc, lockout.returnDistanceGuaranteedKm
-            )
-            tvLockoutRelayInfo.text =
-                if (relayOk) "물리적 전원 공급 차단됨 (대기 누수 0W)" else "릴레이 차단 상태 확인 중"
-            tvLockoutHvacInfo.text = String.format(
-                Locale.US,
-                "목표 실내 온도 %.1f℃ 유지 중 (유틸리티 모드 %s)",
-                lockout.cabinTargetTempCelsius,
-                if (hvacOk) "작동 중" else "대체 전환"
-            )
-            tvLockoutSdkLog.text = "하드웨어 제어 로그: $detail"
-            showScreen(4)
-        }
+        tvLockoutBmsInfo.text = String.format(
+            Locale.US,
+            "시연 잔량 %.1f%% 보존 · 귀가 가능 거리 예시: 약 %.1f km",
+            lockout.bmsPreservedSoc, lockout.returnDistanceGuaranteedKm
+        )
+        tvLockoutRelayInfo.text = "시연 상태: V2L 전원 차단 완료"
+        tvLockoutHvacInfo.text = String.format(
+            Locale.US, "유틸리티 모드 시연 · 목표 실내 온도 %.1f℃", lockout.cabinTargetTempCelsius
+        )
+        tvLockoutSdkLog.text = "로컬 시연 데이터입니다. 차량 제어 API 연결 후 실제 상태로 교체합니다."
+        showScreen(4)
     }
 
     // =========================================================
@@ -841,49 +982,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val etUrl = addField("FastAPI 서버 주소", currentServerUrl)
         val etModel = addField("차량 모델", userVehicleModel)
         val etCap = addField("배터리 용량 (kWh)", userBatteryCapacity.toString(), numeric = true)
         val etWeight = addField("공차중량 (kg)", userCurbWeight.toString(), numeric = true)
         val etEff = addField("평소 전비 (km/kWh)", userAvgEfficiency.toString(), numeric = true)
 
         AlertDialog.Builder(this)
-            .setTitle("⚙️ 차량 스펙 & 서버 연결 설정")
+            .setTitle("⚙️ 차량 시연 정보 설정")
             .setView(container)
             .setNegativeButton("취소", null)
             .setPositiveButton("저장") { _, _ ->
-                val newUrl = etUrl.text.toString().trim().ifEmpty { currentServerUrl }
-                currentServerUrl = newUrl
-                ApiClient.updateBaseUrl(newUrl)
-
-                val req = UserVehicleUpdateRequest(
-                    vehicleModel = etModel.text.toString().trim().ifEmpty { userVehicleModel },
-                    batteryCapacity = etCap.text.toString().toDoubleOrNull() ?: userBatteryCapacity,
-                    curbWeight = etWeight.text.toString().toDoubleOrNull()?.toInt() ?: userCurbWeight,
-                    avgEfficiency = etEff.text.toString().toDoubleOrNull() ?: userAvgEfficiency
-                )
-
-                lifecycleScope.launch {
-                    runCatching { ApiClient.service.updateUserVehicle(req) }
-                        .onSuccess { res ->
-                            res.data?.let { applyUserVehicle(it) }
-                            updateVehicleSummaryUI("백엔드 연결됨")
-                            toast("차량 스펙이 DB에 저장되었습니다.")
-                        }
-                        .onFailure { e ->
-                            toast("서버 저장 실패 (주소 확인 필요): ${e.message}")
-                        }
-                }
+                userVehicleModel = etModel.text.toString().trim().ifEmpty { userVehicleModel }
+                userBatteryCapacity = etCap.text.toString().toDoubleOrNull() ?: userBatteryCapacity
+                userCurbWeight = etWeight.text.toString().toDoubleOrNull()?.toInt() ?: userCurbWeight
+                userAvgEfficiency = etEff.text.toString().toDoubleOrNull() ?: userAvgEfficiency
+                updateVehicleSummaryUI("로컬 시연 데이터")
+                toast("차량 시연 정보가 저장되었습니다.")
             }
             .show()
     }
 
     private fun showScreen(step: Int) {
         currentScreenIndex = step
+        layoutScreen00.visibility = if (step == 0) View.VISIBLE else View.GONE
         layoutScreen01.visibility = if (step == 1) View.VISIBLE else View.GONE
         layoutScreen02.visibility = if (step == 2) View.VISIBLE else View.GONE
         layoutScreen03.visibility = if (step == 3) View.VISIBLE else View.GONE
         layoutScreen04.visibility = if (step == 4) View.VISIBLE else View.GONE
+        layoutScreen05.visibility = if (step == 5) View.VISIBLE else View.GONE
     }
 
     private fun toast(msg: String) {
