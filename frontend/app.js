@@ -1,45 +1,377 @@
-const API = (localStorage.getItem("vlocker-api-base") || "http://localhost:8000").replace(/\/$/, "");
-const ORIGIN = { lat: 37.6242, lng: 128.742 };
-const modes = [
-  { key: "safe", api: "SAFE", name: "안심", subtitle: "귀가 여유 크게", desc: "배터리 잔여량을 넉넉하게 확보해요", fallback: 37.9, hours: 14.9 },
-  { key: "balanced", api: "NORMAL", name: "균형 추천", subtitle: "귀가와 사용 균형", desc: "주행 예측에 15% 여유를 더해 보존해요", fallback: 32.3, hours: 18.5 },
-  { key: "maximum", api: "MAX_USE", name: "V2L 오래 사용", subtitle: "사용 시간 우선", desc: "귀가에 필요한 최소 배터리를 보존해요", fallback: 28.1, hours: 21.2 }
-];
-const state = { screen:"setup", destination:"", place:null, departure:"내일 오전 10:00", passengers:2, analysis:null, mode:"balanced", soc:61, load:1.2, session:null, fallback:true, v2l:true, modal:"", seen:{}, hours:null, lockout:null, busy:false, charger:"인근 급속 충전소" };
-const app=document.querySelector("#app"), toastNode=document.querySelector("#toast");
-let toastTimer, searchTimer, pollTimer;
-function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
-function val(v,d){if(v===null||v===undefined||v==="")return d;return isFinite(Number(v))?Number(v):d;}
-function asset(n){return "assets/"+n;}
-function toast(s){toastNode.textContent=s;toastNode.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastNode.classList.remove("show");},2800);}
-async function api(path,opts){opts=opts||{};opts.headers=Object.assign({"Content-Type":"application/json"},opts.headers||{});let r=await fetch(API+path,opts);let j=await r.json().catch(function(){return {};});if(!r.ok)throw Error(j.detail||j.message||("API 오류 "+r.status));return j.data===undefined?j:j.data;}
-function currentMode(){return plans().find(function(m){return m.key===state.mode;})||plans()[1];}
-function plans(){let r=state.analysis&&state.analysis.recommendations;if(!r)return modes.map(function(m){return Object.assign({},m,{reserve:m.fallback,time:m.hours,enough:true});});return modes.map(function(m){let x=r[m.api]||{};return Object.assign({},m,{reserve:val(x.reserve_soc_percent,m.fallback),time:val(x.v2l_usable_hours,m.hours),enough:x.is_sufficient!==false});});}
-function header(step){let ss=[["setup","귀가 조건"],["selection","배터리 계획"],["monitor","실시간 모니터링"]];return '<header class="topbar"><div class="brand"><span class="brand-mark"><img src="'+asset("brand-shield.svg")+'" alt=""></span><span>V-Locker<small>PLEOS CONNECT</small></span></div><div class="steps">'+ss.map(function(s,i){let done=(step==="selection"&&i===0)||(step==="monitor"&&i<2)||(step==="complete"&&i<3);return '<span class="step '+(step===s[0]?"active ":"")+(done?"done":"")+'"><i>'+(done?"✓":i+1)+'</i>'+s[1]+'</span>'+(i<2?'<b>›</b>':"");}).join("")+'</div><span class="connection"><i class="'+(state.session?"online":"")+'"></i>'+ (state.session?"차량 연결됨":"데모 모드")+'</span></header>';}
-function foot(label,action){return '<footer class="footer"><button class="primary" data-action="'+action+'">'+label+'　›</button></footer>';}
-function fallbackBanner(text){return state.fallback?'<div class="fallback-banner"><b>✓　기본 안전 모드로 보호 중</b><small>'+text+'</small></div>':"";}
-function setup(){return '<div class="shell">'+header("setup")+'<main class="page"><div class="heading"><div><span class="eyebrow">STEP 01 · 귀가 조건</span><h1>어디로, 언제 돌아가세요?</h1><p>귀가 정보를 입력하면 필요한 배터리를 계산해요.</p></div><div class="battery-chip"><img src="'+asset("battery-charging.svg")+'" alt="">현재 배터리 <b>'+state.soc+'%</b></div></div><div class="setup-grid"><section class="panel form-panel"><label class="field-label" for="destination">귀가 목적지</label><div class="search-wrap"><span class="search-icon">⌕</span><input id="destination" value="'+esc(state.destination)+'" placeholder="장소나 주소를 검색하세요" autocomplete="off"><button class="clear-search" data-action="clear" aria-label="검색어 지우기">×</button><div id="suggestions" class="suggestions"></div></div><div class="shortcuts"><button data-action="home">⌂　우리 집</button><button data-action="charger">ϟ　가까운 급속 충전소</button></div><hr><div class="form-row"><div><label class="field-label" for="departure">출발 예정</label><select id="departure"><option>내일 오전 10:00</option><option>내일 오전 08:00</option><option>내일 오후 12:00</option><option>오늘 오후 10:00</option></select></div><div><span class="field-label">함께 타는 사람</span><div class="passengers"><button data-passengers="1">1인</button><button data-passengers="2">2인</button><button data-passengers="4">가족 + 짐</button></div></div></div></section><aside class="panel route-panel"><div class="route-art"><span class="route-caption">내일 아침 귀가 경로</span><div class="route-line"></div><span class="route-origin">●　현재 차박지</span><span class="route-dest">●　'+esc(state.place?state.place.name:(state.destination||"귀가 목적지"))+'</span></div><div class="route-stats"><div><small>출발 위치</small><b>현재 차박지</b></div><div><small>기상·경로</small><b>분석 후 표시</b></div><div><small>차량 전비</small><b>5.4 km/kWh</b></div></div><small class="muted">경로와 날씨는 분석 시 최신 정보로 확인해요.</small></aside></div></main>'+foot("AI 귀가 경로와 배터리 분석하기","analyze")+'</div>';}
-function selection(){let a=state.analysis||{},n=a.navigation||{},w=a.weather||{},d=a.destination||{};let cards=plans().map(function(p){return '<button class="plan-card '+p.key+(state.mode===p.key?" chosen":"")+'" data-mode="'+p.key+'"><span class="plan-title">'+p.name+'</span><span class="plan-sub">'+p.subtitle+'</span><strong class="reserve">'+p.reserve.toFixed(1)+'<small>%</small></strong><small class="reserve-caption">귀가 때 남겨둘 배터리</small><hr><span class="hours">V2L 약 <b>'+p.time.toFixed(1)+'시간</b></span><span class="plan-desc">'+p.desc+'</span>'+(p.enough?"":'<small class="insufficient">현재 배터리로 부족할 수 있어요</small>')+'</button>';}).join("");return '<div class="shell">'+header("selection")+'<main class="page"><div class="heading compact"><div><span class="eyebrow">STEP 02 · 배터리 계획</span><h1>귀가 배터리, 얼마나 남겨둘까요?</h1><p><b>'+esc(d.name||state.destination)+'</b>까지 '+val(n.distance_km,86).toFixed(1)+'km · '+esc(state.departure)+' 출발</p></div><button class="text-button" data-action="edit">조건 수정</button></div>'+fallbackBanner("네트워크가 불안정해 −5°C · 오르막 640m 기준으로 계산했어요.")+'<div class="analysis-strip"><div><small>출발지 기온</small><b>'+val(w.temperature,-5).toFixed(1)+'°C</b></div><div><small>귀가 거리</small><b>'+val(n.distance_km,86).toFixed(1)+'km</b></div><div><small>오르막</small><b>+'+val(n.elevation_gain_m,640).toFixed(0)+'m</b></div><div><small>탑승 인원</small><b>'+(state.passengers>=4?"가족 + 짐":state.passengers+"인")+'</b></div></div><div class="section-label"><div><h2>귀가 배터리 여유를 선택하세요</h2><p>남겨둘 양과 V2L 사용 시간을 비교해 보세요.</p></div><small>현재 배터리 '+state.soc+'%</small></div><div class="plan-grid">'+cards+'</div><p class="hint">남겨둘 배터리가 많을수록 귀가 여유가 커지고, V2L 사용 시간은 짧아져요.</p></main>'+foot("이 기준으로 V2L 모니터링 시작","start")+'</div>';}
-function remainHours(){if(state.hours!==null)return state.hours;let p=plans().find(function(x){return x.key===state.mode;})||modes[1];return Math.max(0,(state.soc-p.reserve)*77.4/100/state.load);}
-function formatTime(h){h=Math.max(0,h);return Math.floor(h)+"시간 "+String(Math.round((h%1)*60)).padStart(2,"0")+"분";}
-function monitor(){let p=plans().find(function(x){return x.key===state.mode;})||modes[1],n=(state.analysis||{}).navigation||{},w=(state.analysis||{}).weather||{},d=(state.analysis||{}).destination||{},left=remainHours();return '<div class="shell">'+header("monitor")+'<main class="page monitor-page"><div class="heading compact"><div><span class="eyebrow">STEP 03 · 실시간 모니터링</span><h1>'+(state.v2l?"귀가 배터리를 지키고 있어요":"V2L 안전 차단 완료")+'</h1><p>'+(state.v2l?"현재 사용량과 차단까지 남은 시간을 확인하세요.":"예약 배터리를 보존하고 무시동 히터로 전환했어요.")+'</p></div><span class="live-state">'+(state.v2l?"●　안전 감시 중":"차단 완료")+'</span></div>'+fallbackBanner("연결이 복구되면 최신 경로와 기상 정보로 갱신해요.")+'<div class="metric-grid"><article class="metric battery"><span>현재 배터리</span><strong>'+state.soc.toFixed(1)+'<small>%</small></strong><div class="bar"><i style="width:'+state.soc+'%"></i></div><small>귀가 예약 '+p.reserve.toFixed(1)+'%까지　<b>'+Math.max(0,state.soc-p.reserve).toFixed(1)+'%p</b></small></article><article class="metric time"><span>차단까지 남은 시간</span><strong>'+formatTime(left)+'</strong><small>예약 잔량 도달 시 V2L을 차단해요</small></article><article class="metric power"><span>실시간 소비 전력</span><strong>'+(state.v2l?state.load.toFixed(1):"0.0")+'<small>kW</small></strong><div class="bar amber"><i style="width:'+Math.min(100,state.load/3*100)+'%"></i></div><small>연결 기기 전체 사용량</small></article></div><div class="lower"><section class="panel conditions"><div class="section-label"><div><h2>귀가 조건</h2><p>분석 기준 요약</p></div><button class="text-button" data-action="edit">새 계획</button></div><div class="condition-grid"><div><small>목적지</small><b>'+esc(d.name||state.destination)+'</b></div><div><small>출발 · 탑승</small><b>'+esc(state.departure)+' · '+(state.passengers>=4?"가족+짐":state.passengers+"인")+'</b></div><div><small>거리 · 오르막</small><b>'+val(n.distance_km,86).toFixed(1)+'km · +'+val(n.elevation_gain_m,640).toFixed(0)+'m</b></div><div><small>기온 · 귀가 배터리</small><b>'+val(w.temperature,-5).toFixed(1)+'°C · '+p.reserve.toFixed(1)+'%</b></div></div></section><section class="panel safety"><b>안전 차단 예약</b><p>1시간·30분 전에 알려드리고<br>목표 잔량에서 전원을 차단해요.</p><button data-action="cutoff" '+(state.v2l?"":"disabled")+'>지금 V2L 차단</button></section></div><details class="demo-tools"><summary>시연 도구　<small>배터리 감소와 알림 흐름 확인</small></summary><div><button data-action="tick" '+(state.v2l?"":"disabled")+'>배터리 2% 감소 · API tick</button><button data-action="warn60">1시간 전 알림 보기</button><button data-action="warn30">30분 전 긴급 알림 보기</button></div></details></main>'+foot(state.v2l?"시연: 차단 완료 화면 보기":"새 귀가 계획 만들기",state.v2l?"demo-lockout":"new")+'</div>';}
-function complete(){let p=currentMode(),d=state.lockout||{},soc=val(d.bms_preserved_soc,p.reserve),km=val(d.return_distance_guaranteed_km,Math.floor(soc*2.9));return '<div class="shell">'+header("complete")+'<main class="page complete"><div class="complete-hero"><span>✓</span><div><small class="eyebrow">STEP 04 · 안전 귀가 준비 완료</small><h1>V2L이 안전하게 종료됐어요</h1><p>귀가 배터리를 보존하고 무시동 히터를 21°C로 전환했어요.</p></div></div><div class="complete-grid"><article><i>⌁</i><small>BMS 안전 점검</small><b>'+soc.toFixed(1)+'% 보존</b><p>귀가 가능 거리 약 '+km.toFixed(0)+'km</p></article><article><i>ϟ</i><small>V2L 전원 릴레이</small><b>전원 공급 차단됨</b><p>대기 전력 누수 0W</p></article><article><i>♨</i><small>무시동 히터</small><b>21°C 유지 중</b><p>유틸리티 모드 자동 전환</p></article></div><div class="complete-note"><b>따뜻하게 쉬고, 내일 안전하게 돌아가세요.</b><small>실제 차량 제어는 Pleos 차량 SDK 연결 후 사용할 수 있어요.</small></div></main>'+foot("새 귀가 계획 만들기","new")+'</div>';}
-function modal(){if(!state.modal)return "";let warn=state.modal==="warn60"||state.modal==="warn30",late=state.modal==="warn30";let title=state.modal==="warn60"?"전원 공급 종료 1시간 전 안내":late?"전원 공급 종료 30분 전 긴급 안내":"V2L을 지금 차단할까요?",body=warn?(late?"인근 급속 충전소 경로로 안전 마진을 다시 계산해 사용 시간을 연장할 수 있어요.":"배터리 보호를 위해 1시간 후 V2L 공급이 종료됩니다. 종료 시 무시동 히터가 자동으로 켜져요."):"연결 기기의 전원이 중단됩니다. 차단 후 귀가 배터리를 보존하고 히터를 21°C로 전환합니다.";let buttons=warn?(late?'<button class="secondary" data-action="dismiss">확인</button><button class="primary" data-action="extend">충전소로 연장</button>':'<button class="primary" data-action="dismiss">확인</button>'):'<button class="secondary" data-action="dismiss">계속 사용</button><button class="danger" data-action="confirm-cutoff">즉시 전원 차단</button>';return '<div class="backdrop"><section class="dialog" role="dialog" aria-modal="true"><button class="close" data-action="dismiss">×</button><span class="warn-icon">'+(late?"!":warn?"i":"ϟ")+'</span><h2>'+title+'</h2><p>'+body+'</p><div class="dialog-buttons">'+buttons+'</div></section></div>';}
-function render(){let html=state.screen==="setup"?setup():state.screen==="selection"?selection():state.screen==="monitor"?monitor():complete();app.innerHTML=html+modal();let dep=document.querySelector("#departure");if(dep)dep.value=state.departure;document.querySelectorAll("[data-passengers]").forEach(function(b){b.classList.toggle("selected",Number(b.dataset.passengers)===state.passengers);});}
-async function search(q){let box=document.querySelector("#suggestions");if(!box)return;try{let d=await api("/api/places/search?q="+encodeURIComponent(q)+"&size=5"),ps=d.places||[];box.innerHTML=ps.map(function(p,i){return '<button class="suggestion" data-place="'+i+'"><b>'+esc(p.name)+'</b><small>'+esc(p.address||p.road_address||"")+'</small></button>';}).join("")||'<small class="suggestion-empty">검색 결과가 없습니다.</small>';box.querySelectorAll("[data-place]").forEach(function(b,i){b.onclick=function(){state.place=ps[i];state.destination=ps[i].name;render();};});}catch{box.innerHTML='<small class="suggestion-empty">장소 검색을 사용할 수 없어요. 우리 집을 선택해 주세요.</small>';}}
-function demoAnalysis(){return {destination:{name:state.place?state.place.name:state.destination},navigation:{distance_km:86,elevation_gain_m:640,estimated_duration_min:85},weather:{temperature:-5,is_fallback:true},is_fallback:true};}
-async function analyze(){if(!state.destination.trim()){toast("목적지를 입력하거나 우리 집을 선택해 주세요.");return;}state.departure=document.querySelector("#departure").value;try{let d=await api("/api/predict",{method:"POST",body:JSON.stringify({destination_name:state.destination,origin_lat:ORIGIN.lat,origin_lng:ORIGIN.lng,dest_lat:state.place?state.place.lat:null,dest_lng:state.place?state.place.lng:null,departure_time:state.departure,passengers:state.passengers,current_soc_percent:state.soc,v2l_current_load_kw:state.load})});state.analysis=d;state.fallback=!!d.is_fallback;}catch{state.analysis=demoAnalysis();state.fallback=true;toast("백엔드 연결 전 기본 안전값으로 분석했어요.");}state.mode="balanced";state.screen="selection";render();}
-async function start(){let p=plans().find(function(x){return x.key===state.mode;}),n=state.analysis.navigation||{},w=state.analysis.weather||{};try{let d=await api("/api/sessions",{method:"POST",body:JSON.stringify({destination_name:(state.analysis.destination||{}).name||state.destination,distance_km:val(n.distance_km,86),elevation_gain_m:val(n.elevation_gain_m,640),expected_temp:val(w.temperature,-5),departure_time:state.departure,passengers:state.passengers,margin_mode:p.api,target_soc:p.reserve,current_soc:state.soc,current_v2l_load_kw:state.load,is_fallback:state.fallback})});state.session=d.session_id;state.soc=val(d.current_soc,state.soc);state.hours=val(d.estimated_hours_left,(state.soc-p.reserve)*77.4/100/state.load);}catch{state.session=null;state.fallback=true;state.hours=(state.soc-p.reserve)*77.4/100/state.load;toast("백엔드 연결 전 데모 모니터링으로 시작했어요.");}state.v2l=true;state.seen={};state.screen="monitor";render();clearInterval(pollTimer);if(state.session)pollTimer=setInterval(refresh,5000);}
-function warn(name){if(state.seen[name]||state.modal)return;state.seen[name]=true;state.modal=name;render();}
-async function refresh(){try{let d=await api("/api/sessions/"+state.session);state.soc=val(d.current_soc,state.soc);state.load=val(d.current_v2l_load_kw,state.load);state.hours=val(d.estimated_hours_left,state.hours);state.fallback=!!d.is_fallback;if(d.warning_level===60)warn("warn60");if(d.warning_level===30)warn("warn30");if(d.v2l_status==="LOCKED_OUT"){finish(d);return;}render();}catch{state.fallback=true;render();}}
-function finish(d){state.lockout=d||{};state.v2l=false;state.modal="";state.screen="complete";clearInterval(pollTimer);render();}
-async function lockout(){try{if(state.session){let d=await api("/api/sessions/"+state.session+"/lockout",{method:"POST"});finish(d);return;}}catch{}let p=currentMode();finish({bms_preserved_soc:p.reserve,return_distance_guaranteed_km:Math.round(p.reserve*2.9)});}
-async function tick(){if(state.busy||!state.v2l)return;state.busy=true;try{if(state.session){let d=await api("/api/sessions/"+state.session+"/tick",{method:"POST",body:JSON.stringify({soc_decrement:2,load_kw:state.load})});state.soc=val(d.current_soc,state.soc-2);state.hours=val(d.estimated_hours_left,state.hours);if(d.warning_level===60)warn("warn60");if(d.warning_level===30)warn("warn30");if(d.v2l_status==="LOCKED_OUT"){finish(d);return;}}else{state.soc=Math.max(currentMode().reserve,state.soc-2);state.hours=Math.max(0,(state.soc-currentMode().reserve)*77.4/100/state.load);if(state.hours<=1)warn(state.hours<=.5?"warn30":"warn60");else toast("시연 배터리 2% 감소 · 현재 "+state.soc.toFixed(1)+"%");}}catch(e){toast("시뮬레이션 오류: "+e.message);}finally{state.busy=false;if(state.screen==="monitor")render();}}
-async function extend(){try{if(state.session){let d=await api("/api/sessions/"+state.session+"/extend",{method:"POST",body:JSON.stringify({origin_lat:ORIGIN.lat,origin_lng:ORIGIN.lng,elevation_gain_m:80})});state.hours=val(d.additional_hours,1.7)+(state.hours||0);state.fallback=!!d.is_fallback;state.modal="";render();toast("충전소 경로 기준으로 "+val(d.additional_hours,1.7).toFixed(1)+"시간 연장했어요.");return;}}catch(e){toast("연장 계산에 실패해 기존 안전 기준을 유지해요.");return;}state.charger="인근 급속 충전소 (12km)";state.hours=(state.hours||0)+1.7;state.modal="";state.fallback=true;render();toast("인근 충전소 경로로 약 1.7시간 연장했어요.");}
-async function charger(){try{let d=await api("/api/chargers/nearby?lat="+ORIGIN.lat+"&lng="+ORIGIN.lng+"&radius_m=20000"),c=(d.chargers||[])[0];state.destination=c?c.name:"인근 급속 충전소";state.place=c||null;render();}catch{state.destination="인근 급속 충전소";state.place=null;render();toast("충전소 검색은 백엔드 연결 후 이용할 수 있어요.");}}
-app.addEventListener("input",function(e){if(e.target.id==="destination"){state.destination=e.target.value;state.place=null;clearTimeout(searchTimer);if(state.destination.trim().length>1)searchTimer=setTimeout(function(){search(state.destination.trim());},280);}});
-app.addEventListener("change",function(e){if(e.target.id==="departure")state.departure=e.target.value;});
-app.addEventListener("click",async function(e){let mode=e.target.closest("[data-mode]");if(mode){state.mode=mode.dataset.mode;render();return;}let ps=e.target.closest("[data-passengers]");if(ps){state.passengers=Number(ps.dataset.passengers);render();return;}let b=e.target.closest("[data-action]");if(!b)return;switch(b.dataset.action){case"analyze":await analyze();break;case"home":state.destination="우리 집";state.place=null;render();break;case"charger":await charger();break;case"clear":state.destination="";state.place=null;render();document.querySelector("#destination").focus();break;case"edit":clearInterval(pollTimer);state.screen="setup";render();break;case"start":await start();break;case"cutoff":state.modal="cutoff";render();break;case"confirm-cutoff":await lockout();break;case"dismiss":state.modal="";render();break;case"extend":await extend();break;case"tick":await tick();break;case"warn60":warn("warn60");break;case"warn30":warn("warn30");break;case"demo-lockout":await lockout();break;case"new":clearInterval(pollTimer);Object.assign(state,{screen:"setup",destination:"",place:null,analysis:null,session:null,soc:61,fallback:true,v2l:true,hours:null,lockout:null});render();break;}});
-document.addEventListener("keydown",function(e){if(e.key==="Escape"&&state.modal){state.modal="";render();}});
-api("/").then(function(){state.fallback=false;let c=document.querySelector(".connection");if(c)c.innerHTML='<i class="online"></i>백엔드 연결됨';}).catch(function(){});
+const asset = (name) => `assets/${name}`;
+
+const plans = {
+  safe: {
+    key: "safe",
+    label: "안심",
+    description: "여유를 넉넉히 확보",
+    reserve: 34,
+    hours: "5시간 10분",
+    gap: 27,
+    gauge: "gauge-safe.svg",
+    headline: "귀가 에너지를 넉넉히 남겨둡니다.",
+    confirmation: "약 5시간 10분 사용 가능 · 귀가 잔량 34%",
+  },
+  balanced: {
+    key: "balanced",
+    label: "균형",
+    description: "주행 데이터 기준으로 설정",
+    reserve: 28,
+    hours: "6시간 40분",
+    gap: 33,
+    gauge: "gauge-balanced.svg",
+    headline: "돌아갈 에너지를 남겨둡니다.",
+    confirmation: "귀가 주행 예상량과 출발 전 공조 여유분을 확보했습니다.",
+  },
+  maximum: {
+    key: "maximum",
+    label: "최대 사용",
+    description: "V2L 사용을 우선",
+    reserve: 24,
+    hours: "7시간 50분",
+    gap: 37,
+    gauge: "gauge-max.svg",
+    headline: "V2L을 더 오래 사용할 수 있어요.",
+    confirmation: "약 7시간 50분 사용 가능 · 귀가 잔량 24%",
+  },
+};
+
+const state = {
+  screen: "selection",
+  margin: "balanced",
+  v2lEnabled: true,
+  modalOpen: false,
+};
+
+const app = document.querySelector("#app");
+const toast = document.querySelector("#toast");
+let toastTimer;
+
+function currentPlan() {
+  return plans[state.margin] || plans.balanced;
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("visible"), 2600);
+}
+
+function header(active = "safety") {
+  const nav = [
+    ["safety", "안전 계획"],
+    ["energy", "에너지 분석"],
+    ["monitor", "실시간 모니터링"],
+    ["utility", "차량 및 유틸리티"],
+  ];
+  return `
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"><img src="${asset("brand-shield.svg")}" alt="" /></span>
+        <span class="brand-name">V2L 세이프 락커</span>
+      </div>
+      <div class="vehicle-meta">
+        <span>내 차량 · 전기차</span>
+        <span class="connection-pill"><img src="${asset("status-dot.svg")}" alt="" />차량 연결됨</span>
+        <span class="top-divider" aria-hidden="true"></span>
+        <img class="top-icon" src="${asset("bell.svg")}" alt="알림" />
+        <img class="top-icon" src="${asset("settings.svg")}" alt="설정" />
+      </div>
+    </header>
+    <nav class="nav-bar" aria-label="주요 메뉴">
+      ${nav.map(([key, label]) => `<button type="button" class="nav-item ${active === key ? "active" : ""}" data-nav="${key}">${label}</button>`).join("")}
+    </nav>`;
+}
+
+function intro(title, subtitle = "", className = "") {
+  return `
+    <section class="page-intro ${subtitle ? "has-subtitle" : ""} ${className}">
+      <div class="intro-stack">
+        <h1>${title}</h1>
+        ${subtitle ? `<p>${subtitle}</p>` : ""}
+      </div>
+    </section>`;
+}
+
+function footerButton(label, action, secondary = false, disabled = false) {
+  const klass = secondary ? "secondary-button" : "primary-button";
+  return `<button type="button" class="${klass} ${disabled ? "button-disabled" : ""}" data-action="${action}" ${disabled ? "disabled" : ""}>${label}${secondary ? "" : `<img src="${asset("arrow-right.svg")}" alt="" />`}</button>`;
+}
+
+function renderSelection() {
+  const plan = currentPlan();
+  const options = Object.values(plans).map((item) => `
+    <button type="button" class="option-card ${state.margin === item.key ? "selected" : ""}" data-margin="${item.key}" aria-pressed="${state.margin === item.key}">
+      <span class="option-title-row">
+        <span class="option-title">${item.label}</span>
+        <img class="option-radio" src="${asset(state.margin === item.key ? "radio-selected.svg" : "radio-empty.svg")}" alt="${state.margin === item.key ? "선택됨" : "선택 안 됨"}" />
+      </span>
+      <span class="option-description">${item.description}</span>
+      <span class="reserve-line"><span class="reserve-number">${item.reserve}%</span><span class="reserve-caption">귀가 예약 잔량</span></span>
+      <span class="option-rule"></span>
+      <span class="time-line"><span>앞으로 약</span><strong>${item.hours}</strong></span>
+    </button>`).join("");
+
+  return `
+    <div class="app-shell screen-enter">
+      ${header("safety")}
+      ${intro("안전 귀가에 필요한 전력량")}
+      <section class="content selection-content" aria-label="귀가 전력 예측 및 안전 마진 선택">
+        <div class="trip-summary">
+          <div class="trip-topline">
+            <div class="destination-line">
+              <img src="${asset("house.svg")}" alt="" />
+              <strong class="destination-name">우리 집까지 86 km</strong>
+              <span class="trip-duration">예상 1시간 25분</span>
+            </div>
+            <span class="trip-badge"><img src="${asset("route-dot.svg")}" alt="" />내일 오전 10:00 출발</span>
+          </div>
+          <div class="summary-rule"></div>
+          <div class="weather-grid">
+            <div class="weather-item"><span>예상 기온</span><strong>−5°C</strong></div>
+            <div class="weather-item"><span>총 상승 고도</span><strong>+640 m</strong></div>
+            <div class="weather-item"><span>평소 전비</span><strong>5.4 km/kWh</strong></div>
+            <div class="weather-item"><span>공조 여유분</span><strong>출발 전 반영</strong></div>
+          </div>
+        </div>
+        <div class="margin-heading"><strong>귀가 예약 잔량을 선택하세요</strong><span>현재 배터리 61% 기준</span></div>
+        <div class="option-grid">${options}</div>
+        <div class="disclaimer"><img src="${asset("info.svg")}" alt="" /><span>예측값은 참고치입니다. 실제 소모량은 기온, 적재량, 주행 조건에 따라 달라질 수 있습니다.</span></div>
+      </section>
+      <footer class="bottom-actions no-rule">${footerButton("이 기준으로 모니터링", "activate")}</footer>
+    </div>`;
+}
+
+function renderActivation() {
+  const plan = currentPlan();
+  const statusSteps = [
+    ["bell-small.svg", "1시간 전", "사전 알림"],
+    ["bell-small.svg", "30분 전", "긴급 알림"],
+    ["shield-small.svg", "예약 잔량 도달", "V2L 자동 차단"],
+  ];
+  return `
+    <div class="app-shell screen-enter">
+      ${header("safety")}
+      ${intro("안전 계획이 활성화됐어요")}
+      <section class="content activation-content" aria-label="안전 계획 활성화 확인">
+        <div class="activation-grid">
+          <article class="protection-card">
+            <span class="state-pill"><img src="${asset("success-dot.svg")}" alt="" />안전 계획 활성</span>
+            <div class="reserve-gauge" aria-label="귀가 예약 잔량 ${plan.reserve}%">
+              <img class="gauge-background" src="${asset("gauge-background.svg")}" alt="" />
+              <div class="gauge-value-clip" data-mode="${plan.key}"><img src="${asset(plan.gauge)}" alt="" /></div>
+              <div class="gauge-number">${plan.reserve}%</div>
+              <div class="gauge-caption">귀가 예약 잔량</div>
+            </div>
+            <h2 class="confirmation-title">${plan.headline}</h2>
+            <p class="confirmation-copy">${plan.confirmation}</p>
+            <div class="card-divider"></div>
+            <div class="choice-summary"><span>선택한 안전 마진</span><strong>${plan.label}</strong></div>
+            <p class="small-note">언제든 설정을 변경하거나 모니터링을 종료할 수 있습니다.</p>
+          </article>
+          <div class="activation-side">
+            <article class="data-card">
+              <div class="section-title-row">
+                <h2 class="card-heading">데이터 상태</h2>
+                <span class="state-pill muted-pill"><img src="${asset("status-muted.svg")}" alt="" />연결 확인 완료</span>
+              </div>
+              <div class="data-row">
+                <span class="data-icon"><img src="${asset("cloud-sun.svg")}" alt="" /></span>
+                <span class="data-copy"><strong>기상·경로 데이터 연결됨</strong><span>귀가 조건에 맞는 예측 데이터 반영</span></span>
+                <img class="data-check" src="${asset("check.svg")}" alt="확인" />
+              </div>
+              <div class="data-row">
+                <span class="data-icon"><img src="${asset("battery-charging.svg")}" alt="" /></span>
+                <span class="data-copy"><strong>차량 배터리 상태 실시간 수신 중</strong><span>현재 차량 배터리 61%</span></span>
+                <img class="data-check" src="${asset("check.svg")}" alt="확인" />
+              </div>
+              <div class="thin-rule"></div>
+              <div class="update-row"><span>예측 데이터 업데이트</span><strong>15분마다</strong></div>
+            </article>
+            <article class="alerts-card">
+              <h2 class="card-heading">차단 전에 미리 알려드려요</h2>
+              <div class="alert-steps">${statusSteps.map(([icon, title, caption]) => `<div class="alert-step"><img src="${asset(icon)}" alt="" /><strong>${title}</strong><span>${caption}</span></div>`).join("")}</div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <footer class="bottom-actions">${footerButton("모니터링 시작", "monitor")}</footer>
+    </div>`;
+}
+
+function renderRouteMap() {
+  return `
+    <div class="route-map" aria-label="현재 캠핑장에서 우리 집까지의 귀가 경로">
+      <img class="map-asset map-water" src="${asset("route-water.svg")}" alt="" />
+      <img class="map-asset map-connector one" src="${asset("route-connector.svg")}" alt="" />
+      <img class="map-asset map-connector two" src="${asset("route-connector.svg")}" alt="" />
+      <img class="map-asset map-connector three" src="${asset("route-connector.svg")}" alt="" />
+      <img class="map-asset map-road row-one" src="${asset("route-road.svg")}" alt="" />
+      <img class="map-asset map-road row-two" src="${asset("route-road.svg")}" alt="" />
+      <img class="map-asset map-road row-three" src="${asset("route-road.svg")}" alt="" />
+      <img class="map-asset map-road row-four" src="${asset("route-road.svg")}" alt="" />
+      <img class="map-asset map-outline" src="${asset("route-outline.svg")}" alt="" />
+      <img class="map-asset map-route" src="${asset("route-line.svg")}" alt="" />
+      <img class="map-asset map-destination" src="${asset("destination-dot.svg")}" alt="" />
+      <img class="map-asset map-origin" src="${asset("origin-dot.svg")}" alt="" />
+      <span class="map-badge">귀가 경로 미리보기</span>
+      <span class="map-label destination">우리 집</span><span class="map-label origin">현재 캠핑장</span>
+      <span class="map-caption">경로 개요 · 실제 지도 축척과 다름</span>
+      <span class="map-zoom" aria-hidden="true">＋<br />−</span>
+    </div>`;
+}
+
+function renderMonitor() {
+  const plan = currentPlan();
+  const protectedWidth = plan.reserve;
+  const usedWidth = Math.max(0, 61 - plan.reserve);
+  const planLine = `귀가 예약 잔량 ${plan.reserve}% · ${plan.label} 마진 · 예약 잔량 도달 시 전원 공급 종료`;
+  const chargeStatus = state.v2lEnabled ? "현재 V2L 사용 중" : "V2L 공급 차단 완료";
+  const availableTime = state.v2lEnabled ? plan.hours : "사용 종료";
+  return `
+    <div class="app-shell screen-enter">
+      ${header("monitor")}
+      ${intro("V2L 안전 모니터링", "캠핑에 쓰는 에너지와 귀가를 위한 에너지를 한눈에 확인하세요.", "monitor-intro")}
+      <section class="content monitor-content" aria-label="V2L 안전 모니터링">
+        <div class="monitor-grid">
+          <div class="monitor-left">
+            <article class="battery-card">
+              <div class="supply-row">
+                <span class="state-pill dark-pill"><img src="${asset("status-dot.svg")}" alt="" />${chargeStatus}</span>
+                <span class="live-label">차량 배터리 실시간 수신</span>
+              </div>
+              <div class="energy-metrics">
+                <div><span class="metric-label">배터리 잔량</span><strong class="battery-number">61%</strong></div>
+                <div><span class="metric-label">앞으로 약 사용 가능</span><strong class="time-value">${availableTime}</strong></div>
+              </div>
+              <div class="energy-bar" role="img" aria-label="귀가 예약 ${plan.reserve}%, V2L 사용 가능 ${usedWidth}%, 남은 전력 39%">
+                <span class="energy-segment energy-protected" style="width:${protectedWidth}%"></span>
+                <span class="energy-segment energy-used" style="width:${usedWidth}%"></span>
+                <span class="energy-segment energy-unused"></span>
+              </div>
+              <div class="energy-labels">
+                <span>귀가 예약 ${plan.reserve}%</span><span class="threshold">차단 기준까지 ${plan.gap}%p</span><span>100%</span>
+              </div>
+              <div class="energy-explanation">${state.v2lEnabled ? planLine : `V2L 공급이 중지됐습니다 · 귀가 예약 잔량 ${plan.reserve}%를 보호하고 있습니다.`}</div>
+            </article>
+            <article class="consumption-card">
+              <div>
+                <p class="consumption-label">실시간 소비 전력</p>
+                <p class="consumption-value">${state.v2lEnabled ? "1.2 kW" : "0.0 kW"}</p>
+                <p class="consumption-foot">연결된 기기 전체 사용량</p>
+              </div>
+              <div class="trend-wrap">
+                <img class="trend-img" src="${asset("power-trend.svg")}" alt="최근 소비 전력 추세" />
+                <div class="trend-caption"><span>전력 흐름 · 표시 예시</span><span>현재</span></div>
+              </div>
+            </article>
+          </div>
+          <aside class="conditions-card">
+            <div class="conditions-heading"><h2>귀가 조건</h2><button class="text-link" type="button" data-action="change-settings">설정 변경 →</button></div>
+            ${renderRouteMap()}
+            <div class="condition-list">
+              <div class="condition-row"><span>목적지</span><strong>우리 집</strong></div>
+              <div class="condition-row"><span>예상 출발</span><strong>내일 오전 10:00</strong></div>
+              <div class="condition-row"><span>거리 / 예상 시간</span><strong>86 km / 1시간 25분</strong></div>
+              <div class="condition-row"><span>예상 기온 / 상승 고도</span><strong>−5°C / +640 m</strong></div>
+              <div class="condition-row"><span>안전 마진</span><strong class="teal-value">${plan.label} · ${plan.reserve}%</strong></div>
+            </div>
+            <p class="condition-note">기상·경로 예측은 15분마다 업데이트됩니다. 실제 소모량은 주행 조건에 따라 달라집니다.</p>
+          </aside>
+        </div>
+        <div class="monitor-alert"><img src="${asset("monitoring-shield.svg")}" alt="" /><span>임계치 도달 1시간·30분 전에 알려드립니다. 차단 시 난방 유지 가능 여부를 확인합니다.</span><strong>안전 계획 활성</strong></div>
+      </section>
+      <footer class="bottom-actions">${state.v2lEnabled ? footerButton("V2L 차단", "open-cutoff", true) : `<button type="button" class="secondary-button button-disabled" disabled>차단 완료</button>`}</footer>
+      ${state.modalOpen ? renderCutoffModal() : ""}
+    </div>`;
+}
+
+function renderCutoffModal() {
+  return `
+    <div class="modal-backdrop" data-action="backdrop" role="presentation">
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="cutoff-title" aria-describedby="cutoff-copy">
+        <span class="warning-icon"><img src="${asset("power.svg")}" alt="" /></span>
+        <h2 id="cutoff-title">V2L 전원 공급을 차단할까요?</h2>
+        <p id="cutoff-copy">차단하면 연결된 기기의 전원이 꺼집니다.<br />계속하려면 ‘V2L 차단’을 선택하세요.</p>
+        <div class="dialog-actions"><button type="button" class="dialog-cancel" data-action="cancel-cutoff">취소</button><button type="button" class="dialog-confirm" data-action="confirm-cutoff">V2L 차단</button></div>
+      </section>
+    </div>`;
+}
+
+function renderCompletion() {
+  return `
+    <div class="app-shell screen-enter">
+      ${header("utility")}
+      ${intro("귀가 전력은 지키고, 실내는 따뜻하게")}
+      <section class="content complete-content" aria-label="V2L 차단 완료">
+        <article class="completion-banner">
+          <img src="${asset("complete-shield.svg")}" alt="" />
+          <div class="completion-copy"><h2>안전 귀가를 위해 V2L이 자동 종료되었습니다.</h2><p>차박 체온 유지를 위해 차량 내부 무시동 히터(유틸리티 모드 21℃)가 자동 작동 중입니다.</p></div>
+          <span class="state-pill muted-pill"><img src="${asset("complete-dot.svg")}" alt="" />귀가 전력 보호</span>
+        </article>
+        <div class="completion-checklist"><img src="${asset("complete-check.svg")}" alt="" /><span>모든 도어와 트렁크가 잠겨 있습니다. 실내 온도와 전원 상태를 확인한 뒤 차단을 완료하세요.</span></div>
+        <div class="utility-grid">
+          <article class="utility-card"><img src="${asset("complete-power.svg")}" alt="" /><h3>V2L 자동 종료 완료</h3></article>
+          <article class="utility-card"><img src="${asset("thermometer.svg")}" alt="" /><h3>유틸리티 모드 21℃</h3></article>
+          <article class="utility-card"><span class="lock-icon"><img src="${asset("lock.svg")}" alt="" /></span><h3>도어 잠금 완료</h3></article>
+        </div>
+      </section>
+      <footer class="bottom-actions no-rule complete-actions">${footerButton("취소", "cancel-completion", true)}${footerButton("차단 완료", "finish-cutoff")}</footer>
+    </div>`;
+}
+
+function render() {
+  if (state.screen === "activation") app.innerHTML = renderActivation();
+  else if (state.screen === "monitor") app.innerHTML = renderMonitor();
+  else if (state.screen === "completion") app.innerHTML = renderCompletion();
+  else app.innerHTML = renderSelection();
+}
+
+app.addEventListener("click", (event) => {
+  const marginButton = event.target.closest("[data-margin]");
+  if (marginButton) {
+    state.margin = marginButton.dataset.margin;
+    render();
+    return;
+  }
+
+  const navButton = event.target.closest("[data-nav]");
+  if (navButton) {
+    if (navButton.dataset.nav === "safety") state.screen = "selection";
+    else if (navButton.dataset.nav === "monitor") state.screen = "monitor";
+    else if (navButton.dataset.nav === "utility") state.screen = "completion";
+    else showToast("에너지 분석 화면은 다음 개발 단계에서 연결할게요.");
+    render();
+    return;
+  }
+
+  const action = event.target.closest("[data-action]")?.dataset.action;
+  if (!action) return;
+  if (action === "activate") state.screen = "activation";
+  else if (action === "monitor") { state.screen = "monitor"; state.v2lEnabled = true; }
+  else if (action === "change-settings") state.screen = "selection";
+  else if (action === "open-cutoff") state.modalOpen = true;
+  else if (action === "cancel-cutoff" || action === "backdrop") {
+    if (action === "backdrop" && event.target.closest(".confirm-dialog")) return;
+    state.modalOpen = false;
+  } else if (action === "confirm-cutoff") {
+    state.modalOpen = false;
+    state.screen = "completion";
+  } else if (action === "cancel-completion") state.screen = "monitor";
+  else if (action === "finish-cutoff") {
+    state.v2lEnabled = false;
+    state.screen = "monitor";
+    showToast("V2L 전원이 차단됐어요. 귀가 예약 잔량을 보호하고 있습니다.");
+  }
+  render();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.modalOpen) {
+    state.modalOpen = false;
+    render();
+  }
+});
+
 render();
