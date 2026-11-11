@@ -10,8 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db
-from backend.app.db.models import User, V2LSession
+from backend.app.db.models import User, V2LSession, FavoriteDestination
 from backend.app.schemas.session import (
+    FavoriteCreateRequest,
+    FavoriteUpdateRequest,
     APIResponse,
     UserVehicleUpdateRequest,
     PredictRequest,
@@ -46,6 +48,168 @@ def get_default_user(db: Session) -> User:
         db.commit()
         db.refresh(user)
     return user
+
+@router.post("/favorites", response_model=APIResponse, status_code=201)
+def create_favorite(
+    req: FavoriteCreateRequest,
+    db: Session = Depends(get_db),
+):
+    """현재 사용자의 즐겨찾기 목적지 등록"""
+
+    user = get_default_user(db)
+
+    favorite = FavoriteDestination(
+        user_id=user.id,
+        name=req.name,
+        address=req.address,
+        latitude=req.latitude,
+        longitude=req.longitude,
+    )
+
+    db.add(favorite)
+    db.commit()
+    db.refresh(favorite)
+
+    return APIResponse(
+        status=201,
+        data={
+            "id": favorite.id,
+            "user_id": favorite.user_id,
+            "name": favorite.name,
+            "address": favorite.address,
+            "latitude": favorite.latitude,
+            "longitude": favorite.longitude,
+            "created_at": favorite.created_at.isoformat(),
+        },
+        message="즐겨찾기 목적지가 등록되었습니다.",
+    )
+
+
+@router.get("/favorites", response_model=APIResponse)
+def get_favorites(db: Session = Depends(get_db)):
+    """현재 사용자의 즐겨찾기 목적지 목록 조회"""
+
+    user = get_default_user(db)
+
+    favorites = (
+        db.query(FavoriteDestination)
+        .filter(FavoriteDestination.user_id == user.id)
+        .order_by(FavoriteDestination.id.desc())
+        .all()
+    )
+
+    return APIResponse(
+        status=200,
+        data=[
+            {
+                "id": favorite.id,
+                "user_id": favorite.user_id,
+                "name": favorite.name,
+                "address": favorite.address,
+                "latitude": favorite.latitude,
+                "longitude": favorite.longitude,
+                "created_at": favorite.created_at.isoformat(),
+            }
+            for favorite in favorites
+        ],
+        message=f"즐겨찾기 {len(favorites)}건 조회 성공",
+    )
+
+
+@router.put("/favorites/{favorite_id}", response_model=APIResponse)
+def update_favorite(
+    favorite_id: int,
+    req: FavoriteUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    """현재 사용자의 즐겨찾기 목적지 수정"""
+
+    user = get_default_user(db)
+
+    favorite = (
+        db.query(FavoriteDestination)
+        .filter(
+            FavoriteDestination.id == favorite_id,
+            FavoriteDestination.user_id == user.id,
+        )
+        .first()
+    )
+
+    if favorite is None:
+        raise HTTPException(
+            status_code=404,
+            detail="즐겨찾기 목적지를 찾을 수 없습니다.",
+        )
+
+    # 요청에 포함된 필드만 변경
+    updates = req.model_dump(exclude_unset=True)
+
+    # 필수 필드는 null로 변경할 수 없음
+    for field in ("name", "latitude", "longitude"):
+        if field in updates and updates[field] is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field}은(는) null일 수 없습니다.",
+            )
+
+    for field, value in updates.items():
+        setattr(favorite, field, value)
+
+    db.commit()
+    db.refresh(favorite)
+
+    return APIResponse(
+        status=200,
+        data={
+            "id": favorite.id,
+            "user_id": favorite.user_id,
+            "name": favorite.name,
+            "address": favorite.address,
+            "latitude": favorite.latitude,
+            "longitude": favorite.longitude,
+            "created_at": favorite.created_at.isoformat(),
+        },
+        message="즐겨찾기 목적지가 수정되었습니다.",
+    )
+
+
+@router.delete("/favorites/{favorite_id}", response_model=APIResponse)
+def delete_favorite(
+    favorite_id: int,
+    db: Session = Depends(get_db),
+):
+    """현재 사용자의 즐겨찾기 목적지 삭제"""
+
+    user = get_default_user(db)
+
+    favorite = (
+        db.query(FavoriteDestination)
+        .filter(
+            FavoriteDestination.id == favorite_id,
+            FavoriteDestination.user_id == user.id,
+        )
+        .first()
+    )
+
+    if favorite is None:
+        raise HTTPException(
+            status_code=404,
+            detail="즐겨찾기 목적지를 찾을 수 없습니다.",
+        )
+
+    deleted_id = favorite.id
+
+    db.delete(favorite)
+    db.commit()
+
+    return APIResponse(
+        status=200,
+        data={
+            "id": deleted_id,
+            "deleted": True,
+        },
+        message="즐겨찾기 목적지가 삭제되었습니다.",
+    )
 
 
 @router.get("/places/search", response_model=APIResponse)
@@ -326,7 +490,7 @@ def get_session_status(
             "target_soc": session.target_soc,
             "remaining_margin_pct": round(max(0.0, session.current_soc - session.target_soc), 1),
             "current_v2l_load_kw": session.current_v2l_load_kw,
-            "estimated_hours_left": hours_left,
+            "ecreate_favoritestimated_hours_left": hours_left,
             "v2l_status": session.v2l_status,
             "warning_level": warning_level,
             "relay_connected": session.relay_connected,
