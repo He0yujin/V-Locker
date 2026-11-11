@@ -1,13 +1,13 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.db.database import Base, engine, SessionLocal
+from backend.app.db.database import Base, engine, SessionLocal, get_db
 from backend.app.db.models import User
-from backend.app.db import session_events
+from backend.app.db import session_events  # noqa: F401 - SQLAlchemy event listeners
 from backend.app.api.routes import router
 
-# DB 테이블 생성
-Base.metadata.create_all(bind=engine)
 
 # 초기 기본 유저 생성
 def init_db():
@@ -27,12 +27,21 @@ def init_db():
     finally:
         db.close()
 
-init_db()
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    # 테스트에서 get_db를 오버라이드한 경우 외부 DB(PostgreSQL) 초기 연결을 건너뜀
+    if get_db not in app_instance.dependency_overrides:
+        Base.metadata.create_all(bind=engine)
+        init_db()
+    yield
+
 
 app = FastAPI(
     title="V2L Safe Locker API",
     description="현대자동차 Pleos App Market용 AI 기반 V2L 전력 자동 제어 백엔드 엔진",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS 미들웨어 설정 (프론트엔드 통신 허용)

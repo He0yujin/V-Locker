@@ -196,6 +196,48 @@ data class TickRequest(
     @SerializedName("load_kw") val loadKw: Double? = null
 )
 
+data class SocSyncRequest(
+    @SerializedName("current_soc") val currentSoc: Double,
+    @SerializedName("load_kw") val loadKw: Double? = null
+)
+
+data class FavoriteItem(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("latitude") val latitude: Double,
+    @SerializedName("longitude") val longitude: Double,
+    @SerializedName("created_at") val createdAt: String? = null
+)
+
+data class FavoritesListData(
+    @SerializedName("favorites") val favorites: List<FavoriteItem>
+)
+
+data class FavoriteCreateRequest(
+    @SerializedName("name") val name: String,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("latitude") val latitude: Double,
+    @SerializedName("longitude") val longitude: Double
+)
+
+data class SessionEventItem(
+    @SerializedName("id") val id: Int,
+    @SerializedName("session_id") val sessionId: Int,
+    @SerializedName("event_type") val eventType: String,
+    @SerializedName("previous_soc") val previousSoc: Double? = null,
+    @SerializedName("current_soc") val currentSoc: Double? = null,
+    @SerializedName("previous_target_soc") val previousTargetSoc: Double? = null,
+    @SerializedName("new_target_soc") val newTargetSoc: Double? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null
+)
+
+data class SessionEventsData(
+    @SerializedName("session_id") val sessionId: Int,
+    @SerializedName("events") val events: List<SessionEventItem>
+)
+
 data class ExtendRequest(
     @SerializedName("origin_lat") val originLat: Double = 37.6242,
     @SerializedName("origin_lng") val originLng: Double = 128.7420,

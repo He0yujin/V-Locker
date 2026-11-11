@@ -12,6 +12,16 @@
     <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
     <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
 
+    <!-- Android 11+(API 30+) 패키지 가시성: Pleos Vehicle Service 및 TTS 엔진 조회 허용 -->
+    <queries>
+        <intent>
+            <action android:name="ai.pleos.playground.vehicle.VEHICLE_START" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

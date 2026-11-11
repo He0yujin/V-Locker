@@ -113,14 +113,48 @@ class CreateSessionRequest(BaseModel):
 
 
 class TickRequest(BaseModel):
-    soc_decrement: float = Field(default=2.0, description="1회 시뮬레이션 시 차감할 배터리 (%)")
-    load_kw: Optional[float] = Field(default=None, description="현재 V2L 소비 전력 갱신치 (kW)")
+    soc_decrement: float = Field(default=2.0, ge=0.0, le=100.0, description="1회 시뮬레이션 시 차감할 배터리 (%)")
+    load_kw: Optional[float] = Field(default=None, gt=0.1, description="현재 V2L 소비 전력 갱신치 (kW)")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "soc_decrement": 2.0,
                 "load_kw": 1.2,
+            }
+        }
+    )
+
+
+class SocSyncRequest(BaseModel):
+    """Pleos EvBattery SDK 실시간 절대 SoC 동기화 요청"""
+    current_soc: float = Field(..., ge=0.0, le=100.0, description="차량 BMS에서 수신한 현재 배터리 잔량 (%)")
+    load_kw: Optional[float] = Field(default=None, gt=0.1, description="현재 V2L 소비 전력 갱신치 (kW)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "current_soc": 34.0,
+                "load_kw": 1.2,
+            }
+        }
+    )
+
+
+class FavoriteDestinationCreateRequest(BaseModel):
+    """즐겨찾기 목적지(우리 집 등) 등록/갱신 요청"""
+    name: str = Field(..., min_length=1, max_length=100, description="즐겨찾기 이름 (예: 우리 집)")
+    address: Optional[str] = Field(default=None, max_length=255, description="도로명/지번 주소")
+    latitude: float = Field(..., ge=-90.0, le=90.0, description="위도")
+    longitude: float = Field(..., ge=-180.0, le=180.0, description="경도")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "우리 집",
+                "address": "서울 강남구 강남대로 396",
+                "latitude": 37.4979,
+                "longitude": 127.0276,
             }
         }
     )

@@ -11,9 +11,23 @@ V2L 및 차량 하드웨어 제어 시뮬레이션 서비스 (V2L Controller Ser
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from backend.app.db.models import V2LSession
-from backend.app.core.calculator import predict_v2l_lockout
+from backend.app.core.calculator import (
+    calc_cold_start_hvac_spike,
+    calc_temperature_efficiency,
+    predict_v2l_lockout,
+)
 
 EMERGENCY_CHARGER_RESERVE_MIN_SOC = 15.0  # 거북이 모드(10%) + 비상 충전소 대기/우회 여유(5%)
+
+
+def _evaluate_warning_status(current_soc: float, target_soc: float, hours_left: float) -> tuple[str, Optional[int]]:
+    if current_soc <= target_soc:
+        return "LOCKED_OUT", None
+    if hours_left <= 0.5 or (current_soc - target_soc) <= 1.0:
+        return "WARN_30M", 30
+    if hours_left <= 1.0 or (current_soc - target_soc) <= 2.0:
+        return "WARN_60M", 60
+    return "ACTIVE", None
 
 
 def update_session_soc(
@@ -27,12 +41,12 @@ def update_session_soc(
 
     - 1시간 전 경고: (current_soc - target_soc) * 배터리용량 / load_kw <= 1.0 hr (약 1.5%p ~ 2.0%p 남음)
     - 30분 전 경고: (current_soc - target_soc) * 배터리용량 / load_kw <= 0.5 hr (약 0.8%p ~ 1.0%p 남음)
-    - 락아웃 차단: current_soc <= target_soc
+    - 락아웃 차단: current_soc <= target_soc (또는 이미 LOCKED_OUT 상태 유지)
     """
     if current_load_kw is not None and current_load_kw > 0.1:
         session.current_v2l_load_kw = current_load_kw
 
-    session.current_soc = round(max(0.0, new_soc), 1)
+    session.current_soc = round(min(100.0, max(0.0, new_soc)), 1)
     battery_cap = session.user.battery_capacity if session.user else 77.4
     load_kw = session.current_v2l_load_kw or 1.2
 
@@ -42,20 +56,21 @@ def update_session_soc(
 
     warning_level = None
 
-    # 상태 전이 로직
-    if session.current_soc <= session.target_soc:
-        # 배터리 임계치 도달 -> 물리 릴레이 즉시 차단 & 무시동 히터 자동 전환
-        session.v2l_status = "LOCKED_OUT"
+    # 이미 수동/자동 차단된 세션은 다시 ACTIVE로 되돌리지 않음
+    if session.v2l_status == "LOCKED_OUT":
         session.relay_connected = False
         session.utility_mode_active = True
-    elif hours_left <= 0.5 or (session.current_soc - session.target_soc) <= 1.0:
-        session.v2l_status = "WARN_30M"
-        warning_level = 30
-    elif hours_left <= 1.0 or (session.current_soc - session.target_soc) <= 2.0:
-        session.v2l_status = "WARN_60M"
-        warning_level = 60
     else:
-        session.v2l_status = "ACTIVE"
+        next_status, warning_level = _evaluate_warning_status(
+            session.current_soc, session.target_soc, hours_left
+        )
+        session.v2l_status = next_status
+        if next_status == "LOCKED_OUT":
+            session.relay_connected = False
+            session.utility_mode_active = True
+        else:
+            session.relay_connected = True
+            session.utility_mode_active = False
 
     db.commit()
     db.refresh(session)
@@ -84,6 +99,13 @@ def execute_v2l_lockout(db: Session, session: V2LSession, reason: str = "MANUAL"
     db.commit()
     db.refresh(session)
 
+    battery_cap = session.user.battery_capacity if session.user else 77.4
+    avg_eff = session.user.avg_efficiency if session.user else 5.4
+    preserved_kwh = (session.current_soc / 100.0) * battery_cap
+    eta_temp = calc_temperature_efficiency(session.expected_temp)
+    spike_kwh = calc_cold_start_hvac_spike(session.expected_temp)
+    guaranteed_km = round(max(0.0, preserved_kwh - spike_kwh) * eta_temp * avg_eff, 1)
+
     return {
         "session_id": session.id,
         "v2l_status": "LOCKED_OUT",
@@ -91,7 +113,7 @@ def execute_v2l_lockout(db: Session, session: V2LSession, reason: str = "MANUAL"
         "utility_mode_active": True,
         "cabin_target_temp_celsius": 21.0,
         "bms_preserved_soc": session.current_soc,
-        "return_distance_guaranteed_km": round(session.distance_km * 1.1, 1),
+        "return_distance_guaranteed_km": guaranteed_km,
     }
 
 
@@ -129,11 +151,17 @@ def extend_v2l_session(
 
     added_hours = round((gained_pct / 100.0 * battery_cap) / load_kw, 1)
 
+    remaining_kwh = max(0.0, (session.current_soc - new_target) / 100.0 * battery_cap)
+    hours_left = round(remaining_kwh / load_kw, 1)
+    next_status, _ = _evaluate_warning_status(session.current_soc, new_target, hours_left)
+
     session.destination_name = f"{charger_name} (비상 충전소 경유)"
     session.distance_km = distance_km
     session.elevation_gain_m = elevation_gain_m
     session.target_soc = new_target
-    session.v2l_status = "ACTIVE" # 경고 상태 해제
+    session.v2l_status = next_status
+    session.relay_connected = next_status != "LOCKED_OUT"
+    session.utility_mode_active = next_status == "LOCKED_OUT"
     session.extended_count += 1
 
     db.commit()

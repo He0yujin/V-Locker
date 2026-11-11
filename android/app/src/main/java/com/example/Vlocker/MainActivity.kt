@@ -3,6 +3,7 @@ package com.example.Vlocker
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.text.InputType
 import android.view.View
 import android.widget.CheckBox
@@ -22,12 +23,15 @@ import androidx.lifecycle.lifecycleScope
 import com.example.Vlocker.network.ApiClient
 import com.example.Vlocker.network.CreateSessionRequest
 import com.example.Vlocker.network.ExtendRequest
+import com.example.Vlocker.network.FavoriteCreateRequest
+import com.example.Vlocker.network.FavoriteItem
 import com.example.Vlocker.network.LockoutData
 import com.example.Vlocker.network.MarginRecommendation
 import com.example.Vlocker.network.PlaceItem
 import com.example.Vlocker.network.PredictData
 import com.example.Vlocker.network.PredictRequest
 import com.example.Vlocker.network.SessionStatusData
+import com.example.Vlocker.network.SocSyncRequest
 import com.example.Vlocker.network.TickRequest
 import com.example.Vlocker.network.UserVehicleData
 import com.example.Vlocker.network.UserVehicleUpdateRequest
@@ -36,6 +40,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
@@ -139,6 +144,15 @@ class MainActivity : AppCompatActivity() {
     private var selectedMarginMode: String = "NORMAL"
     private var activeSessionId: Int? = null
     private var lastShownWarningLevel: Int? = null
+    private var isLockoutTriggered: Boolean = false
+    private var isSyncingLiveSoc: Boolean = false
+    private var lastSyncedLiveSoc: Double? = null
+    private var savedHomeFavorite: FavoriteItem? = null
+    private var selectedDestAddress: String? = null
+
+    // 차량 스피커 TTS 안내
+    private var textToSpeech: TextToSpeech? = null
+    private var isTtsReady: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -166,6 +180,7 @@ class MainActivity : AppCompatActivity() {
 
         bindViews()
         setupListeners()
+        initTextToSpeech()
         initVehicleAndBackend()
     }
 
@@ -245,11 +260,31 @@ class MainActivity : AppCompatActivity() {
         btnSearchPlaces.setOnClickListener { searchPlacesFromBackend() }
 
         btnShortcutHome.setOnClickListener {
-            etDestination.setText("우리 집")
-            selectedDestLat = 37.4979
-            selectedDestLng = 127.0276
-            layoutPlaceResults.visibility = View.GONE
-            tvSelectedDestCoords.text = "선택: 우리 집 (기본 등록 서울 강남 좌표)"
+            val home = savedHomeFavorite
+            if (home != null) {
+                etDestination.setText(home.name)
+                selectedDestLat = home.latitude
+                selectedDestLng = home.longitude
+                selectedDestAddress = home.address
+                layoutPlaceResults.visibility = View.GONE
+                tvSelectedDestCoords.text = String.format(
+                    Locale.US,
+                    "선택: %s (DB 저장 즐겨찾기 %.4f, %.4f)",
+                    home.name, home.latitude, home.longitude
+                )
+            } else {
+                etDestination.setText("우리 집")
+                selectedDestLat = 37.4979
+                selectedDestLng = 127.0276
+                selectedDestAddress = null
+                layoutPlaceResults.visibility = View.GONE
+                tvSelectedDestCoords.text = "선택: 우리 집 (기본 등록 서울 강남 좌표 · 길게 눌러 현재 목적지 저장)"
+            }
+        }
+
+        btnShortcutHome.setOnLongClickListener {
+            saveCurrentDestinationAsHome()
+            true
         }
 
         btnShortcutCharger.setOnClickListener { findNearestChargerShortcut() }
@@ -285,8 +320,30 @@ class MainActivity : AppCompatActivity() {
         btnResetToStart.setOnClickListener {
             activeSessionId = null
             lastShownWarningLevel = null
+            isLockoutTriggered = false
+            isSyncingLiveSoc = false
+            lastSyncedLiveSoc = null
             cardFallbackBanner.visibility = View.GONE
             showScreen(1)
+        }
+    }
+
+    private fun initTextToSpeech() {
+        runCatching {
+            textToSpeech = TextToSpeech(this) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    val langResult = textToSpeech?.setLanguage(Locale.KOREAN)
+                    isTtsReady = langResult != TextToSpeech.LANG_MISSING_DATA &&
+                        langResult != TextToSpeech.LANG_NOT_SUPPORTED
+                }
+            }
+        }
+    }
+
+    private fun speakSafetyNotice(message: String) {
+        if (!isTtsReady) return
+        runCatching {
+            textToSpeech?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "vlocker_alert")
         }
     }
 
@@ -295,6 +352,14 @@ class MainActivity : AppCompatActivity() {
         vehicleManager.onLiveSocChanged = { liveSoc ->
             currentSocPercent = liveSoc
             updateVehicleSummaryUI()
+
+            val sessionId = activeSessionId
+            if (currentScreenIndex == 3 && sessionId != null && !isLockoutTriggered) {
+                val prevSynced = lastSyncedLiveSoc
+                if (!isSyncingLiveSoc && (prevSynced == null || abs(liveSoc - prevSynced) >= 0.1)) {
+                    syncLiveSocToBackend(sessionId, liveSoc)
+                }
+            }
         }
 
         vehicleManager.initialize { connected, _ ->
@@ -317,9 +382,47 @@ class MainActivity : AppCompatActivity() {
                 .onSuccess { res ->
                     res.data?.let { applyUserVehicle(it) }
                     updateVehicleSummaryUI("백엔드 연결됨")
+                    fetchSavedHomeFavorite()
                 }
                 .onFailure {
                     updateVehicleSummaryUI("백엔드 미연결 (차량 설정 확인)")
+                }
+        }
+    }
+
+    private fun fetchSavedHomeFavorite() {
+        lifecycleScope.launch {
+            runCatching { ApiClient.service.listFavorites() }
+                .onSuccess { res ->
+                    val favorites = res.data?.favorites.orEmpty()
+                    savedHomeFavorite = favorites.firstOrNull {
+                        it.name.contains("우리 집") || it.name.contains("우리집")
+                    } ?: favorites.firstOrNull()
+                }
+        }
+    }
+
+    private fun saveCurrentDestinationAsHome() {
+        val lat = selectedDestLat
+        val lng = selectedDestLng
+        if (lat == null || lng == null) {
+            toast("먼저 목적지를 검색해 선택한 뒤 [우리 집] 버튼을 길게 눌러 저장해 주세요.")
+            return
+        }
+        val req = FavoriteCreateRequest(
+            name = "우리 집",
+            address = selectedDestAddress ?: etDestination.text.toString().trim(),
+            latitude = lat,
+            longitude = lng
+        )
+        lifecycleScope.launch {
+            runCatching { ApiClient.service.upsertFavorite(req) }
+                .onSuccess { res ->
+                    savedHomeFavorite = res.data
+                    toast("'우리 집' 좌표가 DB에 저장되었습니다.")
+                }
+                .onFailure { e ->
+                    toast("즐겨찾기 저장 실패: ${e.message}")
                 }
         }
     }
@@ -389,6 +492,7 @@ class MainActivity : AppCompatActivity() {
                     etDestination.setText(place.name)
                     selectedDestLat = place.lat
                     selectedDestLng = place.lng
+                    selectedDestAddress = place.address
                     layoutPlaceResults.visibility = View.GONE
                     tvSelectedDestCoords.text = String.format(
                         Locale.US,
@@ -411,6 +515,7 @@ class MainActivity : AppCompatActivity() {
                         etDestination.setText(charger.name)
                         selectedDestLat = charger.lat
                         selectedDestLng = charger.lng
+                        selectedDestAddress = charger.address
                         layoutPlaceResults.visibility = View.GONE
                         tvSelectedDestCoords.text = String.format(
                             Locale.US,
@@ -606,6 +711,9 @@ class MainActivity : AppCompatActivity() {
                     if (session != null) {
                         activeSessionId = session.sessionId
                         lastShownWarningLevel = null
+                        isLockoutTriggered = false
+                        isSyncingLiveSoc = false
+                        lastSyncedLiveSoc = session.currentSoc
                         renderSessionDashboard(session)
                         showScreen(3)
                     }
@@ -637,6 +745,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun syncLiveSocToBackend(sessionId: Int, liveSoc: Double) {
+        isSyncingLiveSoc = true
+        lifecycleScope.launch {
+            runCatching {
+                ApiClient.service.syncSessionSoc(
+                    sessionId,
+                    SocSyncRequest(currentSoc = liveSoc, loadKw = readLoadKw())
+                )
+            }.onSuccess { res ->
+                val session = res.data
+                if (session != null) {
+                    lastSyncedLiveSoc = session.currentSoc
+                    handleSessionTransition(session)
+                }
+            }
+            isSyncingLiveSoc = false
+        }
+    }
+
     private fun refreshActiveSession() {
         val sessionId = activeSessionId ?: return
         lifecycleScope.launch {
@@ -653,21 +780,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleSessionTransition(session: SessionStatusData) {
         currentSocPercent = session.currentSoc
+        lastSyncedLiveSoc = session.currentSoc
         updateVehicleSummaryUI()
         renderSessionDashboard(session)
 
         when (session.v2lStatus) {
-            "LOCKED_OUT" -> triggerFinalLockoutSequence(session.sessionId)
+            "LOCKED_OUT" -> {
+                if (!isLockoutTriggered) {
+                    triggerFinalLockoutSequence(session.sessionId)
+                }
+            }
             "WARN_30M" -> {
                 if (lastShownWarningLevel != 30) {
                     lastShownWarningLevel = 30
                     showWarn30mDialog()
+                    speakSafetyNotice("긴급 알림. 약 30분 후 V2L 전원이 차단됩니다. 필요하면 사용 연장을 선택해 주세요.")
                 }
             }
             "WARN_60M" -> {
                 if (lastShownWarningLevel == null) {
                     lastShownWarningLevel = 60
                     showWarn60mDialog()
+                    speakSafetyNotice("배터리 보호를 위해 약 1시간 후 V2L 전원이 종료됩니다.")
                 }
             }
         }
@@ -785,13 +919,20 @@ class MainActivity : AppCompatActivity() {
     // Screen 04 락아웃 & Pleos HVAC 21℃ 가동
     // =========================================================
     private fun triggerFinalLockoutSequence(sessionId: Int) {
+        if (isLockoutTriggered) return
+        isLockoutTriggered = true
         lifecycleScope.launch {
             runCatching { ApiClient.service.lockoutSession(sessionId) }
                 .onSuccess { res ->
-                    val lockout = res.data ?: return@onSuccess
-                    executeHardwareAndShowScreen04(lockout)
+                    val lockout = res.data
+                    if (lockout != null) {
+                        executeHardwareAndShowScreen04(lockout)
+                    } else {
+                        isLockoutTriggered = false
+                    }
                 }
                 .onFailure { e ->
+                    isLockoutTriggered = false
                     toast("차단 API 호출 실패: ${e.message}")
                 }
         }
@@ -813,7 +954,18 @@ class MainActivity : AppCompatActivity() {
                 if (hvacOk) "작동 중" else "대체 전환"
             )
             tvLockoutSdkLog.text = "하드웨어 제어 로그: $detail"
+            speakSafetyNotice("V2L 전원을 안전하게 차단하고 차량 무시동 히터를 21도로 가동했습니다.")
             showScreen(4)
+
+            lifecycleScope.launch {
+                runCatching { ApiClient.service.getSessionEvents(lockout.sessionId) }
+                    .onSuccess { res ->
+                        val count = res.data?.events?.size ?: 0
+                        if (count > 0) {
+                            tvLockoutSdkLog.text = "하드웨어 제어 로그: $detail\nDB 감사 로그 ${count}건 기록 완료"
+                        }
+                    }
+            }
         }
     }
 
@@ -868,6 +1020,7 @@ class MainActivity : AppCompatActivity() {
                         .onSuccess { res ->
                             res.data?.let { applyUserVehicle(it) }
                             updateVehicleSummaryUI("백엔드 연결됨")
+                            fetchSavedHomeFavorite()
                             toast("차량 스펙이 DB에 저장되었습니다.")
                         }
                         .onFailure { e ->
@@ -891,6 +1044,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        runCatching {
+            textToSpeech?.stop()
+            textToSpeech?.shutdown()
+        }
+        textToSpeech = null
         vehicleManager.release()
         super.onDestroy()
     }

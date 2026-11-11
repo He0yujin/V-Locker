@@ -10,14 +10,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db
-from backend.app.db.models import User, V2LSession
+from backend.app.db.models import User, V2LSession, FavoriteDestination, V2LSessionEvent
 from backend.app.schemas.session import (
     APIResponse,
     UserVehicleUpdateRequest,
     PredictRequest,
     CreateSessionRequest,
     TickRequest,
+    SocSyncRequest,
     ExtendRequest,
+    FavoriteDestinationCreateRequest,
 )
 from backend.app.services.places import search_places, search_nearby_ev_chargers
 from backend.app.services.weather import fetch_forecast_temperature
@@ -122,6 +124,123 @@ def update_user_vehicle(req: UserVehicleUpdateRequest, db: Session = Depends(get
     )
 
 
+def _build_session_status_message(v2l_status: str, default_msg: str) -> str:
+    if v2l_status == "LOCKED_OUT":
+        return "목표 배터리에 도달하여 V2L이 안전 차단되었으며 무시동 히터가 가동되었습니다."
+    if v2l_status == "WARN_30M":
+        return "차단 30분 전 긴급 예고 알림 발생!"
+    if v2l_status == "WARN_60M":
+        return "차단 1시간 전 예고 알림 발생"
+    return default_msg
+
+
+@router.get("/favorites", response_model=APIResponse)
+def list_favorite_destinations(db: Session = Depends(get_db)):
+    """등록된 즐겨찾기 목적지(우리 집 등) 목록 조회"""
+    user = get_default_user(db)
+    favorites = (
+        db.query(FavoriteDestination)
+        .filter(FavoriteDestination.user_id == user.id)
+        .order_by(FavoriteDestination.id.asc())
+        .all()
+    )
+    return APIResponse(
+        status=200,
+        data={
+            "favorites": [
+                {
+                    "id": fav.id,
+                    "name": fav.name,
+                    "address": fav.address,
+                    "latitude": fav.latitude,
+                    "longitude": fav.longitude,
+                    "created_at": fav.created_at.isoformat() if fav.created_at else None,
+                }
+                for fav in favorites
+            ]
+        },
+        message=f"즐겨찾기 목적지 조회 완료 ({len(favorites)}건)",
+    )
+
+
+@router.post("/favorites", response_model=APIResponse)
+def upsert_favorite_destination(
+    req: FavoriteDestinationCreateRequest,
+    db: Session = Depends(get_db),
+):
+    """즐겨찾기 목적지(예: 우리 집) 등록 또는 동일 이름 좌표 갱신"""
+    user = get_default_user(db)
+    clean_name = req.name.strip()
+    existing = (
+        db.query(FavoriteDestination)
+        .filter(
+            FavoriteDestination.user_id == user.id,
+            FavoriteDestination.name == clean_name,
+        )
+        .first()
+    )
+    if existing:
+        existing.address = req.address
+        existing.latitude = req.latitude
+        existing.longitude = req.longitude
+        db.commit()
+        db.refresh(existing)
+        fav = existing
+        msg = f"즐겨찾기 '{fav.name}' 정보가 갱신되었습니다."
+    else:
+        fav = FavoriteDestination(
+            user_id=user.id,
+            name=clean_name,
+            address=req.address,
+            latitude=req.latitude,
+            longitude=req.longitude,
+        )
+        db.add(fav)
+        db.commit()
+        db.refresh(fav)
+        msg = f"즐겨찾기 '{fav.name}'이(가) 등록되었습니다."
+
+    return APIResponse(
+        status=200,
+        data={
+            "id": fav.id,
+            "name": fav.name,
+            "address": fav.address,
+            "latitude": fav.latitude,
+            "longitude": fav.longitude,
+            "created_at": fav.created_at.isoformat() if fav.created_at else None,
+        },
+        message=msg,
+    )
+
+
+@router.delete("/favorites/{favorite_id}", response_model=APIResponse)
+def delete_favorite_destination(
+    favorite_id: int,
+    db: Session = Depends(get_db),
+):
+    """즐겨찾기 목적지 삭제"""
+    user = get_default_user(db)
+    fav = (
+        db.query(FavoriteDestination)
+        .filter(
+            FavoriteDestination.id == favorite_id,
+            FavoriteDestination.user_id == user.id,
+        )
+        .first()
+    )
+    if not fav:
+        raise HTTPException(status_code=404, detail="즐겨찾기 목적지를 찾을 수 없습니다.")
+
+    db.delete(fav)
+    db.commit()
+    return APIResponse(
+        status=200,
+        data={"deleted_id": favorite_id},
+        message="즐겨찾기 목적지가 삭제되었습니다.",
+    )
+
+
 @router.post("/predict", response_model=APIResponse)
 async def predict_battery_consumption(
     req: PredictRequest,
@@ -129,22 +248,35 @@ async def predict_battery_consumption(
 ):
     """
     [핵심 기능 1] 실시간 다중 데이터 융합 배터리 소모량 예측 API
-    1) 목적지 좌표 미지정 시 카카오 로컬 검색으로 자동 좌표 변환
+    1) 목적지 좌표 미지정 시 즐겨찾기(우리 집) 조회 또는 카카오 로컬 검색으로 자동 좌표 변환
     2) 카카오모빌리티 자동차 길찾기 + 지형 고도 API 연동
     3) 기상청 단기예보 API (출발지/목적지 격자 변환) 연동
     4) 비례 가중치 기반 3단계 마진(최대사용 / 균형 / 안심) 산출
     """
     user = get_default_user(db)
 
-    # 0. 목적지 좌표 확인 (없거나 Swagger 기본값 0인 경우 카카오 로컬 검색으로 자동 매핑)
+    # 0. 목적지 좌표 확인 (없거나 Swagger 기본값 0인 경우 즐겨찾기 또는 카카오 로컬 검색으로 자동 매핑)
     d_lat = None if req.dest_lat == 0 else req.dest_lat
     d_lng = None if req.dest_lng == 0 else req.dest_lng
     resolved_dest_name = req.destination_name
 
     if (d_lat is None or d_lng is None) and not req.force_fallback:
-        # "우리 집" 같은 별칭이면 기본 서울 강남 좌표 사용, 실제 지명이면 카카오 검색
         if "우리 집" in req.destination_name or "우리집" in req.destination_name:
-            d_lat, d_lng = 37.4979, 127.0276
+            home_fav = (
+                db.query(FavoriteDestination)
+                .filter(FavoriteDestination.user_id == user.id)
+                .order_by(FavoriteDestination.id.asc())
+                .all()
+            )
+            matched_home = next(
+                (f for f in home_fav if "우리 집" in f.name or "우리집" in f.name),
+                None,
+            )
+            if matched_home:
+                d_lat, d_lng = matched_home.latitude, matched_home.longitude
+                resolved_dest_name = matched_home.name
+            else:
+                d_lat, d_lng = 37.4979, 127.0276
         else:
             place_res = await search_places(req.destination_name, size=1)
             places = place_res.get("places", [])
@@ -298,6 +430,44 @@ def create_session(
     )
 
 
+@router.get("/sessions", response_model=APIResponse)
+def list_sessions(
+    limit: int = Query(20, ge=1, le=100, description="조회할 최근 세션 수"),
+    db: Session = Depends(get_db),
+):
+    """최근 V2L 안전 모니터링 세션 목록 조회"""
+    user = get_default_user(db)
+    sessions = (
+        db.query(V2LSession)
+        .filter(V2LSession.user_id == user.id)
+        .order_by(V2LSession.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return APIResponse(
+        status=200,
+        data={
+            "sessions": [
+                {
+                    "session_id": s.id,
+                    "destination_name": s.destination_name,
+                    "margin_mode": s.margin_mode,
+                    "target_soc": s.target_soc,
+                    "current_soc": s.current_soc,
+                    "current_v2l_load_kw": s.current_v2l_load_kw,
+                    "v2l_status": s.v2l_status,
+                    "relay_connected": s.relay_connected,
+                    "utility_mode_active": s.utility_mode_active,
+                    "extended_count": s.extended_count,
+                    "created_at": s.created_at.isoformat() if s.created_at else None,
+                }
+                for s in sessions
+            ]
+        },
+        message=f"V2L 세션 목록 조회 완료 ({len(sessions)}건)",
+    )
+
+
 @router.get("/sessions/{session_id}", response_model=APIResponse)
 def get_session_status(
     session_id: int,
@@ -345,6 +515,68 @@ def get_session_status(
     )
 
 
+@router.get("/sessions/{session_id}/events", response_model=APIResponse)
+def get_session_events(
+    session_id: int,
+    db: Session = Depends(get_db),
+):
+    """V2L 세션의 상태 전이 및 배터리/목표 잔량 변경 감사 로그 조회"""
+    session = db.query(V2LSession).filter(V2LSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다.")
+
+    events = (
+        db.query(V2LSessionEvent)
+        .filter(V2LSessionEvent.session_id == session_id)
+        .order_by(V2LSessionEvent.id.asc())
+        .all()
+    )
+    return APIResponse(
+        status=200,
+        data={
+            "session_id": session_id,
+            "events": [
+                {
+                    "id": ev.id,
+                    "session_id": ev.session_id,
+                    "event_type": ev.event_type,
+                    "previous_soc": ev.previous_soc,
+                    "current_soc": ev.current_soc,
+                    "previous_target_soc": ev.previous_target_soc,
+                    "new_target_soc": ev.new_target_soc,
+                    "description": ev.description,
+                    "created_at": ev.created_at.isoformat() if ev.created_at else None,
+                }
+                for ev in events
+            ],
+        },
+        message=f"세션 이벤트 이력 조회 완료 ({len(events)}건)",
+    )
+
+
+@router.patch("/sessions/{session_id}/soc", response_model=APIResponse)
+def sync_session_soc(
+    session_id: int,
+    req: SocSyncRequest,
+    db: Session = Depends(get_db),
+):
+    """[Pleos EvBattery SDK 연동용] 실시간 차량 절대 배터리 SoC(%) 동기화 및 경고/차단 평가"""
+    session = db.query(V2LSession).filter(V2LSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다.")
+
+    status_data = update_session_soc(db, session, req.current_soc, req.load_kw)
+    msg = _build_session_status_message(
+        status_data["v2l_status"],
+        "실시간 차량 배터리 SoC 동기화 완료",
+    )
+    return APIResponse(
+        status=200,
+        data=status_data,
+        message=msg,
+    )
+
+
 @router.post("/sessions/{session_id}/tick", response_model=APIResponse)
 def simulate_session_tick(
     session_id: int,
@@ -358,14 +590,10 @@ def simulate_session_tick(
 
     new_soc = session.current_soc - req.soc_decrement
     status_data = update_session_soc(db, session, new_soc, req.load_kw)
-
-    msg = "시뮬레이션 배터리 감소 완료"
-    if status_data["v2l_status"] == "LOCKED_OUT":
-        msg = "목표 배터리에 도달하여 V2L이 안전 차단되었으며 무시동 히터가 가동되었습니다."
-    elif status_data["v2l_status"] == "WARN_30M":
-        msg = "차단 30분 전 긴급 예고 알림 발생!"
-    elif status_data["v2l_status"] == "WARN_60M":
-        msg = "차단 1시간 전 예고 알림 발생"
+    msg = _build_session_status_message(
+        status_data["v2l_status"],
+        "시뮬레이션 배터리 감소 완료",
+    )
 
     return APIResponse(
         status=200,

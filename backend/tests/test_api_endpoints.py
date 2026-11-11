@@ -216,3 +216,130 @@ def test_session_lifecycle_and_soft_lockout(client):
     manual_res = client.post(f"/api/sessions/{session_id}/lockout")
     assert manual_res.status_code == 200
     assert manual_res.json()["data"]["cabin_target_temp_celsius"] == 21.0
+
+    # 7. 세션 이벤트 감사 로그(SESSION_STARTED -> SOC_UPDATED -> SESSION_EXTENDED -> LOCKED_OUT) 확인
+    events_res = client.get(f"/api/sessions/{session_id}/events")
+    assert events_res.status_code == 200
+    event_types = [ev["event_type"] for ev in events_res.json()["data"]["events"]]
+    assert event_types[0] == "SESSION_STARTED"
+    assert "SOC_UPDATED" in event_types
+    assert "SESSION_EXTENDED" in event_types
+    assert "LOCKED_OUT" in event_types
+
+
+def test_favorites_crud_and_predict_home_lookup(client):
+    """즐겨찾기 CRUD(/api/favorites) 및 '우리 집' 예측 시 DB 좌표 자동 조회 검증"""
+    list_res = client.get("/api/favorites")
+    assert list_res.status_code == 200
+    assert list_res.json()["data"]["favorites"] == []
+
+    # 1. '우리 집' 등록
+    create_res = client.post(
+        "/api/favorites",
+        json={
+            "name": "우리 집",
+            "address": "경기 성남시 분당구 판교역로 160",
+            "latitude": 37.3947,
+            "longitude": 127.1112,
+        },
+    )
+    assert create_res.status_code == 200
+    fav_id = create_res.json()["data"]["id"]
+
+    # 2. 동일 이름 재등록 시 중복 생성 대신 좌표 갱신(Upsert)
+    upsert_res = client.post(
+        "/api/favorites",
+        json={
+            "name": "우리 집",
+            "address": "서울 강남구 학동로 343",
+            "latitude": 37.5172,
+            "longitude": 127.0473,
+        },
+    )
+    assert upsert_res.status_code == 200
+    assert upsert_res.json()["data"]["id"] == fav_id
+    assert len(client.get("/api/favorites").json()["data"]["favorites"]) == 1
+
+    # 3. '우리 집'으로 /api/predict 호출 시 등록된 DB 좌표가 반영되는지 확인
+    mock_weather = {"temperature": 2.0, "is_fallback": False, "source": "KMA", "description": "ok"}
+    mock_nav = {"distance_km": 175.0, "elevation_gain_m": 320.0, "estimated_duration_min": 180, "is_fallback": False}
+
+    with (
+        patch("backend.app.api.routes.fetch_forecast_temperature", return_value=mock_weather),
+        patch("backend.app.api.routes.fetch_route_topology", return_value=mock_nav) as m_nav,
+    ):
+        pred_res = client.post(
+            "/api/predict",
+            json={
+                "destination_name": "우리 집",
+                "origin_lat": 37.6242,
+                "origin_lng": 128.7420,
+            },
+        )
+        assert pred_res.status_code == 200
+        dest = pred_res.json()["data"]["destination"]
+        assert dest["dest_lat"] == 37.5172
+        assert dest["dest_lng"] == 127.0473
+        assert m_nav.call_args.kwargs["dest_lat"] == 37.5172
+        assert m_nav.call_args.kwargs["dest_lng"] == 127.0473
+
+    # 4. 삭제 및 미존재 삭제 404 검증
+    del_res = client.delete(f"/api/favorites/{fav_id}")
+    assert del_res.status_code == 200
+    assert client.get("/api/favorites").json()["data"]["favorites"] == []
+    assert client.delete(f"/api/favorites/{fav_id}").status_code == 404
+
+
+def test_realtime_soc_sync_sessions_list_and_lockout_guard(client):
+    """실시간 절대 SoC 동기화(PATCH /soc), 세션 목록 조회, 락아웃 후 상태 보호 검증"""
+    create_res = client.post(
+        "/api/sessions",
+        json={
+            "destination_name": "강남역 2호선",
+            "distance_km": 86.0,
+            "elevation_gain_m": 640.0,
+            "expected_temp": -5.0,
+            "departure_time": "내일 오전 10:00",
+            "passengers": 2,
+            "margin_mode": "NORMAL",
+            "target_soc": 32.3,
+            "current_soc": 61.0,
+            "current_v2l_load_kw": 1.2,
+        },
+    )
+    assert create_res.status_code == 200
+    session_id = create_res.json()["data"]["session_id"]
+
+    # 세션 목록 조회
+    list_res = client.get("/api/sessions")
+    assert list_res.status_code == 200
+    assert len(list_res.json()["data"]["sessions"]) == 1
+    assert list_res.json()["data"]["sessions"][0]["session_id"] == session_id
+
+    # 절대 SoC 동기화 -> WARN_60M -> WARN_30M
+    sync_60 = client.patch(f"/api/sessions/{session_id}/soc", json={"current_soc": 34.0, "load_kw": 1.2})
+    assert sync_60.status_code == 200
+    assert sync_60.json()["data"]["v2l_status"] == "WARN_60M"
+    assert sync_60.json()["data"]["warning_level"] == 60
+
+    sync_30 = client.patch(f"/api/sessions/{session_id}/soc", json={"current_soc": 33.0})
+    assert sync_30.status_code == 200
+    assert sync_30.json()["data"]["v2l_status"] == "WARN_30M"
+    assert sync_30.json()["data"]["warning_level"] == 30
+
+    # 수동 락아웃 실행 (SoC가 target보다 큰 33.0% 상태에서도 LOCKED_OUT)
+    lock_res = client.post(f"/api/sessions/{session_id}/lockout")
+    assert lock_res.status_code == 200
+    assert lock_res.json()["data"]["v2l_status"] == "LOCKED_OUT"
+    assert lock_res.json()["data"]["return_distance_guaranteed_km"] > 0
+
+    # 락아웃 이후 높은 SoC 동기화나 tick(0%)이 들어와도 ACTIVE로 풀리지 않고 LOCKED_OUT 유지
+    guard_sync = client.patch(f"/api/sessions/{session_id}/soc", json={"current_soc": 50.0})
+    assert guard_sync.status_code == 200
+    assert guard_sync.json()["data"]["v2l_status"] == "LOCKED_OUT"
+    assert guard_sync.json()["data"]["relay_connected"] is False
+    assert guard_sync.json()["data"]["utility_mode_active"] is True
+
+    # 존재하지 않는 세션 404 검증
+    assert client.patch("/api/sessions/99999/soc", json={"current_soc": 50.0}).status_code == 404
+    assert client.get("/api/sessions/99999/events").status_code == 404

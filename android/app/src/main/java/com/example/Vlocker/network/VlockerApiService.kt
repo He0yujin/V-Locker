@@ -1,7 +1,9 @@
 package com.example.Vlocker.network
 
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -23,6 +25,20 @@ interface VlockerApiService {
         @Query("lng") lng: Double = 128.7420,
         @Query("radius_m") radiusM: Int = 20000
     ): APIResponse<ChargersNearbyData>
+
+    // 2-1. 즐겨찾기 목적지('우리 집' 등) 조회 / 등록 / 삭제
+    @GET("api/favorites")
+    suspend fun listFavorites(): APIResponse<FavoritesListData>
+
+    @POST("api/favorites")
+    suspend fun upsertFavorite(
+        @Body request: FavoriteCreateRequest
+    ): APIResponse<FavoriteItem>
+
+    @DELETE("api/favorites/{favoriteId}")
+    suspend fun deleteFavorite(
+        @Path("favoriteId") favoriteId: Int
+    ): APIResponse<Map<String, Int>>
 
     // 3. 차량 스펙 및 운전자 평소 전비 조회
     @GET("api/user")
@@ -51,6 +67,19 @@ interface VlockerApiService {
     suspend fun getSessionStatus(
         @Path("sessionId") sessionId: Int
     ): APIResponse<SessionStatusData>
+
+    // 7-1. 실시간 EvBattery SoC 절대값 동기화
+    @PATCH("api/sessions/{sessionId}/soc")
+    suspend fun syncSessionSoc(
+        @Path("sessionId") sessionId: Int,
+        @Body request: SocSyncRequest
+    ): APIResponse<SessionStatusData>
+
+    // 7-2. 세션 감사 이벤트 로그 조회
+    @GET("api/sessions/{sessionId}/events")
+    suspend fun getSessionEvents(
+        @Path("sessionId") sessionId: Int
+    ): APIResponse<SessionEventsData>
 
     // 8. 시연용 배터리 차감 시뮬레이션 Tick
     @POST("api/sessions/{sessionId}/tick")

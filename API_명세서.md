@@ -21,10 +21,10 @@ flowchart TB
     end
 
     subgraph BE["2. V2L Safe Locker Python FastAPI 백엔드"]
-        R1["GET /api/places/search · GET /api/chargers/nearby"]
+        R1["GET /api/places/search · GET /api/chargers/nearby · /api/favorites"]
         R2["GET/PUT /api/user · POST /api/predict"]
-        R3["POST /api/sessions · GET /api/sessions/{id}"]
-        R4["POST /api/sessions/{id}/tick · extend · lockout"]
+        R3["GET/POST /api/sessions · GET /api/sessions/{id} · /events"]
+        R4["PATCH /api/sessions/{id}/soc · POST .../tick · extend · lockout"]
     end
 
     subgraph PLEOS["3. 현대자동차 Pleos In-Car (Kotlin AAOS 앱)"]
@@ -313,5 +313,41 @@ flowchart TB
   "message": "안전을 위해 V2L이 정상 차단되었으며, 동사 방지를 위해 차량 무시동 히터가 21℃로 가동되었습니다."
 }
 ```
+
+---
+
+### 3.10 실시간 절대 SoC 동기화 (Pleos EvBattery SDK 연동)
+* **엔드포인트:** `PATCH /api/sessions/{session_id}/soc`
+* **설명:** 차량 BMS(`EvBattery`)가 실시간으로 전달한 절대 배터리 잔량(`current_soc`)을 동기화하고 `WARN_60M` / `WARN_30M` / `LOCKED_OUT` 상태를 판정합니다. (이미 `LOCKED_OUT` 상태인 세션은 해제되지 않습니다.)
+* **Request Body:**
+```json
+{
+  "current_soc": 34.0,
+  "load_kw": 1.2
+}
+```
+
+---
+
+### 3.11 세션 목록 및 이벤트 감사 로그 조회
+* **세션 목록:** `GET /api/sessions?limit=20`
+* **세션 이벤트 로그:** `GET /api/sessions/{session_id}/events`
+* **설명:** `SESSION_STARTED`, `SOC_UPDATED`, `SESSION_EXTENDED`, `LOCKED_OUT` 등 DB에 자동 기록된 상태 전이 감사 이력을 시간순으로 조회합니다.
+
+---
+
+### 3.12 즐겨찾기 목적지 ('우리 집' 등) CRUD
+* **조회:** `GET /api/favorites`
+* **등록/갱신(Upsert):** `POST /api/favorites`
+  ```json
+  {
+    "name": "우리 집",
+    "address": "서울 강남구 강남대로 396",
+    "latitude": 37.4979,
+    "longitude": 127.0276
+  }
+  ```
+* **삭제:** `DELETE /api/favorites/{favorite_id}`
+* **연동 효과:** `POST /api/predict`에서 `"destination_name": "우리 집"` 호출 시 등록된 DB 좌표를 우선 사용합니다.
 
 
