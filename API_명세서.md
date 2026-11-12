@@ -1,12 +1,12 @@
-# 🔌 V2L 세이프 락커 API 연동 및 엔드포인트 명세서 (v2.0)
+# 🔌 V2L 세이프 락커 API 연동 및 엔드포인트 명세서 (v2.1)
 
-* **버전:** v2.0 (실제 외부 API 연동 및 비례 가중치 엔진 반영)
-* **작성/갱신일자:** 2026-11-09
-* **적용 환경:** 현대자동차 Pleos App Market (Android Automotive Kotlin 클라이언트) ↔ Python FastAPI 백엔드
+* **버전:** v2.1 (실제 외부 API · 비례 가중치 · 도로 폴리라인 · `android-wide` 연동 현행화)
+* **작성/갱신일자:** 2026-11-12
+* **적용 환경:** 현대자동차 Pleos Connect (`android-wide` Kotlin 클라이언트) ↔ Python FastAPI 백엔드
 
 > [!IMPORTANT]
-> 본 명세서는 [routes.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/api/routes.py)의 실제 구현과 100% 일치하도록 현행화되었습니다.  
-> 모든 백엔드 응답은 `{"status": 200, "data": {...}, "message": "..."}` 표준 JSON 포맷을 따릅니다.
+> 본 명세서는 [routes.py](file:///Users/heoyujin/Desktop/V-Locker/backend/app/api/routes.py) 및 [VlockerApiService.kt](file:///Users/heoyujin/Desktop/V-Locker/android-wide/app/src/main/java/com/example/Vlocker/network/VlockerApiService.kt)의 실제 구현과 일치하도록 현행화되었습니다.  
+> 모든 백엔드 응답은 `{"status": 200, "data": {...}, "message": "..."}` 표준 JSON 포맷을 따르며, 서버 미연결 시에도 앱 내 `OfflineSafetyEngine`이 동일 물리 수식으로 무중단 폴백을 수행합니다.
 
 ---
 
@@ -42,7 +42,7 @@ flowchart TB
 ## 2. 외부 데이터 및 차량 제어 연동 상세
 
 ### 2.1 [외부] 기상청 단기예보 조회서비스 (`15084084`)
-* **파일:** [weather.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/services/weather.py)
+* **파일:** [weather.py](file:///Users/heoyujin/Desktop/V-Locker/backend/app/services/weather.py)
 * **연동 방식:** WGS84 위경도 → 기상청 공식 5km 격자(`nx, ny`, 람베르트 정각원추도법) 자동 변환 후 `getVilageFcst` 호출
 * **추출 항목:** 출발 예정 날짜(`오늘`/`내일`/`모레`) 및 시각(`TMP` 1시간 기온, `SKY` 하늘상태)
 * **3중 안전망 (Fail-Safe):**
@@ -51,21 +51,22 @@ flowchart TB
   3. **3순위:** Default Safety Fallback (**-5.0℃**, `is_fallback: true`)
 
 ### 2.2 [외부] 카카오 로컬 & 카카오모빌리티 토폴로지 API
-* **파일:** [places.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/services/places.py), [navigation.py](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/backend/app/services/navigation.py)
+* **파일:** [places.py](file:///Users/heoyujin/Desktop/V-Locker/backend/app/services/places.py), [navigation.py](file:///Users/heoyujin/Desktop/V-Locker/backend/app/services/navigation.py)
 * **목적:**
   1. 목적지 명칭 → 위경도 좌표 변환 (`/v2/local/search/keyword.json`)
   2. 현재 차박지 반경 20km 내 최단거리 전기차 충전소 탐색 (`query="전기차충전소"`)
-  3. 자동차 실도로 주행거리(km), 소요시간(분) + 폴리라인 25개 샘플링 포인트 기반 **순수 획득 고도($\Delta h$)** 산출
+  3. 자동차 실도로 주행거리(km), 소요시간(분), 지도 렌더링용 `polyline_points`(`geometry_type`: `ROAD` / `ESTIMATED`) + 25개 샘플링 포인트 기반 **순수 획득 고도($\Delta h$)** 산출
 * **3중 안전망 (Fail-Safe):**
   1. **1순위:** 카카오모빌리티 Directions + Open-Meteo Elevation
   2. **2순위:** OSRM 오픈소스 도로 라우팅 + Open-Meteo Elevation
   3. **3순위:** Default Safety Fallback (**86.0km, +640.0m**, `is_fallback: true`)
 
-### 2.3 [SDV] 현대자동차 Pleos Vehicle SDK v2.3.1 연동 포인트
-* **상세 가이드:** [Pleos_개발_가이드.md](file:///Users/heoyujin/Desktop/V2L%20Safe%20Locker/Pleos_%EA%B0%9C%EB%B0%9C_%EA%B0%80%EC%9D%B4%EB%93%9C.md) 참조
-* **`EvBattery`:** 실시간 SoC(%) 및 주행 전비(km/kWh) → 백엔드 `/api/predict`, `/api/sessions` 전달
-* **`HVAC`:** 락아웃 발생 시 동사 방지를 위해 차량 실내 목표 온도 **21.0℃** 유지 제어
+### 2.3 [SDV] 현대자동차 Pleos Vehicle SDK `v2.3.2` 연동 포인트
+* **상세 가이드:** [Pleos_개발_가이드.md](file:///Users/heoyujin/Desktop/V-Locker/Pleos_%EA%B0%9C%EB%B0%9C_%EA%B0%80%EC%9D%B4%EB%93%9C.md), [PleosVehicleManager.kt](file:///Users/heoyujin/Desktop/V-Locker/android-wide/app/src/main/java/com/example/Vlocker/vehicle/PleosVehicleManager.kt)
+* **`EvBattery` (`CAR_ENERGY`):** 실시간 SoC(%) 조회/구독 및 누적 전비(km/kWh) 조회 → 백엔드 `/api/predict`, `/api/sessions` 전달 *(미사용 `CONTROL_CAR_ENERGY`는 최소 권한 원칙상 제외)*
+* **`HVAC` (`CAR_CLIMATE`, `CONTROL_CAR_CLIMATE`):** 락아웃 발생 시 동사 방지를 위해 차량 공조 쓰기 권한 및 허용 온도 범위 사전 검증 후 실내 목표 온도 **21.0℃** 유지 제어
 * **V2L 릴레이 차단 어댑터:** 공개 SDK 미노출 제어 영역을 `V2lHardwareController` 인터페이스로 추상화해 백엔드 상태 머신(`LOCKED_OUT`)과 연동
+* **로컬 오프라인 안전망:** 백엔드 서버 무응답 시 `OfflineSafetyEngine`이 동일한 예측/경고/충전소 연장/차단 판정을 앱 내부에서 즉시 실행
 
 ---
 
@@ -142,7 +143,7 @@ flowchart TB
 ### 3.4 AI 배터리 소모량 예측 및 비례 가중치 3단계 마진 산출
 * **엔드포인트:** `POST /api/predict`
 * **설명:** 목적지/출발지 좌표와 출발 시각을 기반으로 기상·지형·전비 데이터를 실시간 융합하여 **순수 귀가 전력($E_{pure}$)**과 **비례 가중치 3단계 마진(`SAFE` x1.35 / `NORMAL` x1.15 / `MAX_USE` x1.00)**을 계산합니다.
-* **Request Body:** *(생략된 필드는 카카오 검색 · 기상청 · DB 값으로 자동 채움)*
+* **Request Body:** *(생략된 필드는 카카오 검색 · 기상청 · DB 값으로 자동 채움 / `avg_efficiency_km_kwh`, `battery_capacity_kwh`, `curb_weight_kg` 선택 오버라이드 지원)*
 ```json
 {
   "destination_name": "강남역",
@@ -156,11 +157,14 @@ flowchart TB
   "passengers": 2,
   "current_soc_percent": 61.0,
   "expected_temp_celsius": null,
+  "avg_efficiency_km_kwh": null,
+  "battery_capacity_kwh": null,
+  "curb_weight_kg": null,
   "v2l_current_load_kw": 1.2,
   "force_fallback": false
 }
 ```
-* **Response Body (200 OK - 실제 안반데기→강남역 190.6km / 6.0℃ 실연동 결과 예시):**
+* **Response Body (200 OK - 실제 안반데기→강남역 실연동 결과 예시 / `navigation.polyline_points` 포함):**
 ```json
 {
   "status": 200,
@@ -190,6 +194,8 @@ flowchart TB
       "elevation_gain_m": 419.0,
       "estimated_duration_min": 203,
       "is_fallback": false,
+      "geometry_type": "ROAD",
+      "polyline_points": [{"lat": 37.6242, "lng": 128.742}, {"lat": 37.498086, "lng": 127.028001}],
       "source": "Kakao Mobility Directions + Open-Meteo Elevation"
     },
     "is_fallback": false,
@@ -288,10 +294,12 @@ flowchart TB
   "origin_lng": 128.7420,
   "nearest_charger_name": null,
   "distance_km": null,
-  "elevation_gain_m": 80.0
+  "elevation_gain_m": 80.0,
+  "dest_lat": null,
+  "dest_lng": null
 }
 ```
-* **동작:** `nearest_charger_name` 또는 `distance_km`가 `null`이면 카카오 로컬로 최단거리 전기차 충전소를 자동 탐색하고 카카오 길찾기/고도 API까지 반영해 `predict_v2l_lockout`으로 목표 SoC를 동적 재계산합니다(비상 보호 하한선 15.0%).
+* **동작:** `nearest_charger_name` 또는 `distance_km`가 `null`이면 카카오 로컬로 최단거리 전기차 충전소를 자동 탐색하고 카카오 길찾기/고도 API까지 반영해 `predict_v2l_lockout`으로 목표 SoC를 동적 재계산합니다(비상 보호 하한선 15.0%). 응답 `data`에는 `dest_lat`, `dest_lng`, `polyline_points`, `geometry_type`도 함께 포함되어 Android 지도 미니맵이 충전소 경유 경로로 즉시 갱신됩니다.
 
 ---
 
@@ -337,8 +345,8 @@ flowchart TB
 ---
 
 ### 3.12 즐겨찾기 목적지 ('우리 집' 등) CRUD
-* **조회:** `GET /api/favorites`
-* **등록/갱신(Upsert):** `POST /api/favorites`
+* **조회:** `GET /api/favorites` (`data.favorites` 배열 반환)
+* **등록/갱신(Upsert):** `POST /api/favorites` (`status: 200`)
   ```json
   {
     "name": "우리 집",
@@ -347,7 +355,8 @@ flowchart TB
     "longitude": 127.0276
   }
   ```
-* **삭제:** `DELETE /api/favorites/{favorite_id}`
+* **부분 수정:** `PUT /api/favorites/{favorite_id}` (변경할 필드만 전송, `name`·`latitude`·`longitude` null/공백 불가)
+* **삭제:** `DELETE /api/favorites/{favorite_id}` (`{"deleted_id": favorite_id}` 반환)
 * **연동 효과:** `POST /api/predict`에서 `"destination_name": "우리 집"` 호출 시 등록된 DB 좌표를 우선 사용합니다.
 
 

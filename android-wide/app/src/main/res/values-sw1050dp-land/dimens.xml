@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- IONIQ 5 / Hyundai Pleos Connect Baseline (sw1050dp-land: 2560x1440 @ 160dpi, ~1.95x-2.0x automotive IVI scale) -->
+    <dimen name="vl_radius_brand">16dp</dimen>
+    <dimen name="vl_radius_card">26dp</dimen>
+    <dimen name="vl_radius_box">18dp</dimen>
+    <dimen name="vl_radius_button">18dp</dimen>
+    <dimen name="vl_radius_button_sm">16dp</dimen>
+    <dimen name="vl_stroke_thin">1.8dp</dimen>
+    <dimen name="vl_stroke_card">1.8dp</dimen>
+    <dimen name="vl_stroke_card_selected">3.5dp</dimen>
+
+    <!-- Header & Navigation Tabs -->
+    <dimen name="vl_topbar_height">86dp</dimen>
+    <dimen name="vl_topbar_pad_h">44dp</dimen>
+    <dimen name="vl_brand_box_size">52dp</dimen>
+    <dimen name="vl_brand_icon_size">32dp</dimen>
+    <dimen name="vl_brand_title_text">28sp</dimen>
+    <dimen name="vl_brand_title_margin">18dp</dimen>
+    <dimen name="vl_top_meta_text">21sp</dimen>
+    <dimen name="vl_top_meta_margin">26dp</dimen>
+    <dimen name="vl_pill_top_height">46dp</dimen>
+    <dimen name="vl_pill_pad_h">20dp</dimen>
+    <dimen name="vl_dot_size">11dp</dimen>
+    <dimen name="vl_pill_text">19sp</dimen>
+    <dimen name="vl_pill_text_margin">10dp</dimen>
+    <dimen name="vl_top_divider_h">32dp</dimen>
+    <dimen name="vl_top_divider_margin">24dp</dimen>
+    <dimen name="vl_top_icon_size">56dp</dimen>
+    <dimen name="vl_top_icon_pad">11dp</dimen>
+    <dimen name="vl_top_settings_margin">14dp</dimen>
+
+    <dimen name="vl_tabbar_height">66dp</dimen>
+    <dimen name="vl_tabbar_pad_h">44dp</dimen>
+    <dimen name="vl_tab_spacing">52dp</dimen>
+    <dimen name="vl_tab_pad_h">10dp</dimen>
+    <dimen name="vl_tab_text">22sp</dimen>
+    <dimen name="vl_tab_indicator_height">4.5dp</dimen>
+
+    <dimen name="vl_banner_pad_h">44dp</dimen>
+    <dimen name="vl_banner_pad_v">18dp</dimen>
+    <dimen name="vl_page_title_text">34sp</dimen>
+    <dimen name="vl_page_subtitle_text">21sp</dimen>
+    <dimen name="vl_page_subtitle_margin">4dp</dimen>
+
+    <!-- Main Scroll & Containers -->
+    <dimen name="vl_content_pad_h">44dp</dimen>
+    <dimen name="vl_content_pad_v">24dp</dimen>
+    <dimen name="vl_fallback_margin_b">20dp</dimen>
+    <dimen name="vl_fallback_pad_h">26dp</dimen>
+    <dimen name="vl_fallback_pad_v">18dp</dimen>
+    <dimen name="vl_fallback_icon_size">32dp</dimen>
+    <dimen name="vl_fallback_text">21sp</dimen>
+    <dimen name="vl_col_gap">28dp</dimen>
+    <dimen name="vl_card_gap_h">24dp</dimen>
+    <dimen name="vl_card_pad">28dp</dimen>
+    <dimen name="vl_card_pad_v_compact">20dp</dimen>
+    <dimen name="vl_card_gap_v">18dp</dimen>
+    <dimen name="vl_divider_margin_v">14dp</dimen>
+    <dimen name="vl_touch_min_height">60dp</dimen>
+
+    <!-- Shared Text & CTA Buttons -->
+    <dimen name="vl_card_title_text">27sp</dimen>
+    <dimen name="vl_pill_small_pad_h">18dp</dimen>
+    <dimen name="vl_pill_small_pad_v">6dp</dimen>
+    <dimen name="vl_pill_small_text">19sp</dimen>
+    <dimen name="vl_label_text">19sp</dimen>
+    <dimen name="vl_body_text">21sp</dimen>
+    <dimen name="vl_sub_text">19sp</dimen>
+    <dimen name="vl_caption_text">18sp</dimen>
+    <dimen name="vl_cta_height">68dp</dimen>
+    <dimen name="vl_cta_pad_h">38dp</dimen>
+    <dimen name="vl_cta_text">23sp</dimen>
+    <dimen name="vl_cta_sec_height">64dp</dimen>
+    <dimen name="vl_cta_sec_pad_h">32dp</dimen>
+    <dimen name="vl_cta_sec_text">21sp</dimen>
+    <dimen name="vl_progress_size">36dp</dimen>
+
+    <!-- Screen 1: Route Setup -->
+    <dimen name="vl_input_height">68dp</dimen>
+    <dimen name="vl_input_pad_h">20dp</dimen>
+    <dimen name="vl_input_icon_size">28dp</dimen>
+    <dimen name="vl_input_text">22sp</dimen>
+    <dimen name="vl_search_btn_height">46dp</dimen>
+    <dimen name="vl_search_btn_pad_h">20dp</dimen>
+    <dimen name="vl_search_btn_text">19sp</dimen>
+    <dimen name="vl_dest_tile_pad_v">14dp</dimen>
+    <dimen name="vl_dest_icon_size">32dp</dimen>
+    <dimen name="vl_dest_title_text">23sp</dimen>
+    <dimen name="vl_dest_sub_text">19sp</dimen>
+    <dimen name="vl_home_btn_height">64dp</dimen>
+    <dimen name="vl_home_btn_text">21sp</dimen>
+    <dimen name="vl_charger_link_text">21sp</dimen>
+    <dimen name="vl_charger_link_pad_v">10dp</dimen>
+    <dimen name="vl_departure_text">22sp</dimen>
+    <dimen name="vl_s1_map_height">490dp</dimen>
+    <dimen name="vl_map_overlay_margin">20dp</dimen>
+    <dimen name="vl_map_overlay_pad_h">18dp</dimen>
+    <dimen name="vl_map_overlay_pad_v">8dp</dimen>
+    <dimen name="vl_map_zoom_width">56dp</dimen>
+    <dimen name="vl_map_zoom_btn_height">52dp</dimen>
+    <dimen name="vl_map_zoom_text">28sp</dimen>
+    <dimen name="vl_kpi_label_text">19sp</dimen>
+    <dimen name="vl_kpi_value_text">38sp</dimen>
+
+    <!-- Screen 2: Margin Plan -->
+    <dimen name="vl_plan_summary_pad_h">30dp</dimen>
+    <dimen name="vl_plan_summary_pad_v">22dp</dimen>
+    <dimen name="vl_plan_icon_size">32dp</dimen>
+    <dimen name="vl_plan_title_text">27sp</dimen>
+    <dimen name="vl_plan_duration_text">23sp</dimen>
+    <dimen name="vl_plan_metric_label_text">20sp</dimen>
+    <dimen name="vl_plan_metric_value_text">26sp</dimen>
+    <dimen name="vl_plan_card_title_text">28sp</dimen>
+    <dimen name="vl_plan_radio_size">34dp</dimen>
+    <dimen name="vl_plan_reserve_num_text">58sp</dimen>
+    <dimen name="vl_plan_hours_text">29sp</dimen>
+    <dimen name="vl_alert_notice_pad_h">22dp</dimen>
+    <dimen name="vl_alert_notice_pad_v">16dp</dimen>
+    <dimen name="vl_info_icon_size">28dp</dimen>
+
+    <!-- Screen 5 (Tab 2): Energy Analysis -->
+    <dimen name="vl_energy_usable_value_text">33sp</dimen>
+    <dimen name="vl_energy_section_title_text">26sp</dimen>
+    <dimen name="vl_energy_row_label_text">22sp</dimen>
+    <dimen name="vl_energy_row_value_text">24sp</dimen>
+    <dimen name="vl_energy_row_gap">16dp</dimen>
+
+    <!-- Screen 3: Monitor -->
+    <dimen name="vl_mon_card_pad">28dp</dimen>
+    <dimen name="vl_mon_state_pill_height">46dp</dimen>
+    <dimen name="vl_mon_hero_soc_text">62sp</dimen>
+    <dimen name="vl_mon_hero_hours_text">42sp</dimen>
+    <dimen name="vl_mon_energy_bar_height">44dp</dimen>
+    <dimen name="vl_mon_load_card_pad_h">30dp</dimen>
+    <dimen name="vl_mon_load_card_pad_v">20dp</dimen>
+    <dimen name="vl_mon_load_value_text">40sp</dimen>
+    <dimen name="vl_mon_power_chart_height">96dp</dimen>
+    <dimen name="vl_mon_map_height">210dp</dimen>
+    <dimen name="vl_mon_zoom_width">48dp</dimen>
+    <dimen name="vl_mon_zoom_btn_height">44dp</dimen>
+    <dimen name="vl_mon_zoom_text">24sp</dimen>
+    <dimen name="vl_mon_zoom_margin">14dp</dimen>
+    <dimen name="vl_mon_row_gap">11dp</dimen>
+    <dimen name="vl_mon_banner_pad_h">26dp</dimen>
+    <dimen name="vl_mon_banner_pad_v">15dp</dimen>
+    <dimen name="vl_mon_demo_pad_h">24dp</dimen>
+    <dimen name="vl_mon_demo_pad_v">14dp</dimen>
+    <dimen name="vl_mon_demo_btn_height">54dp</dimen>
+    <dimen name="vl_mon_demo_btn_pad_h">18dp</dimen>
+    <dimen name="vl_mon_demo_btn_text">18sp</dimen>
+    <dimen name="vl_mon_demo_btn_gap">12dp</dimen>
+    <dimen name="vl_mon_stop_height">70dp</dimen>
+    <dimen name="vl_mon_stop_pad_h">34dp</dimen>
+    <dimen name="vl_mon_stop_text">24sp</dimen>
+
+    <!-- Screen 4: Utility -->
+    <dimen name="vl_util_shield_size">42dp</dimen>
+    <dimen name="vl_util_headline_text">26sp</dimen>
+    <dimen name="vl_util_desc_text">21sp</dimen>
+    <dimen name="vl_util_card_height">280dp</dimen>
+    <dimen name="vl_util_icon_size">96dp</dimen>
+    <dimen name="vl_util_lock_icon_width">78dp</dimen>
+    <dimen name="vl_util_card_title_text">27sp</dimen>
+    <dimen name="vl_util_card_sub_text">20sp</dimen>
+
+    <!-- Custom Views Canvas Painting -->
+    <dimen name="vl_cv_map_radius">22dp</dimen>
+    <dimen name="vl_cv_map_grid_stroke">1.8dp</dimen>
+    <dimen name="vl_cv_map_major_grid_stroke">4.5dp</dimen>
+    <dimen name="vl_cv_map_dash_on">16dp</dimen>
+    <dimen name="vl_cv_map_dash_off">10dp</dimen>
+    <dimen name="vl_cv_map_shadow_compact">14dp</dimen>
+    <dimen name="vl_cv_map_shadow_normal">17dp</dimen>
+    <dimen name="vl_cv_map_route_compact">6.5dp</dimen>
+    <dimen name="vl_cv_map_route_normal">8dp</dimen>
+    <dimen name="vl_cv_map_dot_origin_outer">11.5dp</dimen>
+    <dimen name="vl_cv_map_dot_origin_inner">7.2dp</dimen>
+    <dimen name="vl_cv_map_dot_dest_outer">12.5dp</dimen>
+    <dimen name="vl_cv_map_dot_dest_ring">8.2dp</dimen>
+    <dimen name="vl_cv_map_dot_dest_core">3.2dp</dimen>
+    <dimen name="vl_cv_map_label_text_compact">19sp</dimen>
+    <dimen name="vl_cv_map_label_text_normal">21sp</dimen>
+    <dimen name="vl_cv_map_label_box_h_compact">38dp</dimen>
+    <dimen name="vl_cv_map_label_box_h_normal">42dp</dimen>
+    <dimen name="vl_cv_map_label_pad_h">14dp</dimen>
+    <dimen name="vl_cv_map_pill_corner">11dp</dimen>
+    <dimen name="vl_cv_map_pill_stroke">1.6dp</dimen>
+    <dimen name="vl_cv_map_compass_w">42dp</dimen>
+    <dimen name="vl_cv_map_compass_h">46dp</dimen>
+    <dimen name="vl_cv_map_compass_text">18sp</dimen>
+    <dimen name="vl_cv_map_caption_text">18sp</dimen>
+    <dimen name="vl_cv_map_badge_margin">18dp</dimen>
+    <dimen name="vl_cv_map_pad_left">34dp</dimen>
+    <dimen name="vl_cv_map_pad_right">90dp</dimen>
+    <dimen name="vl_cv_map_pad_top_overlay">76dp</dimen>
+    <dimen name="vl_cv_map_pad_top_compact">28dp</dimen>
+    <dimen name="vl_cv_map_pad_top_normal">34dp</dimen>
+    <dimen name="vl_cv_map_pad_bottom">54dp</dimen>
+    <dimen name="vl_cv_map_compact_threshold">230dp</dimen>
+    <dimen name="vl_cv_map_scale_min">54dp</dimen>
+    <dimen name="vl_cv_map_scale_max">130dp</dimen>
+    <dimen name="vl_cv_map_scale_right_reserve">160dp</dimen>
+    <dimen name="vl_cv_map_scale_stroke">2.8dp</dimen>
+
+    <dimen name="vl_cv_power_grid_stroke">1.8dp</dimen>
+    <dimen name="vl_cv_power_line_stroke">4.2dp</dimen>
+    <dimen name="vl_cv_power_pad_v">14dp</dimen>
+    <dimen name="vl_cv_power_pad_h">10dp</dimen>
+    <dimen name="vl_cv_power_dot_outer">8.5dp</dimen>
+    <dimen name="vl_cv_power_dot_inner">5.8dp</dimen>
+    <dimen name="vl_cv_power_dot_minor">4.0dp</dimen>
+
+    <dimen name="vl_cv_bar_top_inset">4dp</dimen>
+    <dimen name="vl_cv_bar_bottom_inset">8dp</dimen>
+    <dimen name="vl_cv_bar_radius">14dp</dimen>
+    <dimen name="vl_cv_bar_divider_stroke">4.5dp</dimen>
+
+    <!-- Programmatic Dropdowns & Modals -->
+    <dimen name="vl_dropdown_row_pad_h">22dp</dimen>
+    <dimen name="vl_dropdown_row_pad_v">16dp</dimen>
+    <dimen name="vl_dropdown_row_min_h">68dp</dimen>
+    <dimen name="vl_dropdown_title_text">22sp</dimen>
+    <dimen name="vl_dropdown_sub_text">19sp</dimen>
+    <dimen name="vl_dialog_pad_h">34dp</dimen>
+    <dimen name="vl_dialog_pad_v">20dp</dimen>
+    <dimen name="vl_dialog_max_width">960dp</dimen>
+    <dimen name="vl_dialog_title_text">30sp</dimen>
+    <dimen name="vl_dialog_body_text">23sp</dimen>
+    <dimen name="vl_dialog_field_label_text">20sp</dimen>
+    <dimen name="vl_dialog_input_text">24sp</dimen>
+    <dimen name="vl_dialog_button_text">22sp</dimen>
+    <dimen name="vl_dialog_button_min_h">64dp</dimen>
+    <dimen name="vl_dialog_item_spacing">14dp</dimen>
+</resources>
+

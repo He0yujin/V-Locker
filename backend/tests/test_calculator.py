@@ -16,7 +16,7 @@ from backend.app.services.weather import (
     _parse_target_hour,
     _parse_target_day_offset,
 )
-from backend.app.services.navigation import fetch_route_topology
+from backend.app.services.navigation import fetch_route_topology, simplify_route_polyline
 from backend.app.services.places import search_places, search_nearby_ev_chargers
 
 KST = timezone(timedelta(hours=9))
@@ -226,13 +226,43 @@ def test_navigation_service_live_mock_and_fallback():
             assert res["elevation_gain_m"] == 419.0
             assert res["estimated_duration_min"] == 203
             assert res["is_fallback"] is False
+            assert res["geometry_type"] == "REAL_ROAD"
+            assert res["polyline_points"] == [
+                {"lat": 37.62, "lng": 128.74},
+                {"lat": 37.55, "lng": 128.0},
+                {"lat": 37.49, "lng": 127.02},
+            ]
 
-    # 전체 네트워크 차단 시 86km / +640m 안전 기본값 보장 검증
+    # 전체 네트워크 차단 시 86km / +640m 안전 기본값 + 추정 폴리라인 보장 검증
     with patch("httpx.AsyncClient.get", side_effect=httpx.ConnectError("offline")):
         res_offline = asyncio.run(fetch_route_topology("우리 집"))
         assert res_offline["distance_km"] == 86.0
         assert res_offline["elevation_gain_m"] == 640.0
         assert res_offline["is_fallback"] is True
+        assert res_offline["geometry_type"] == "ESTIMATED"
+        assert len(res_offline["polyline_points"]) >= 2
+
+
+def test_simplify_route_polyline_preserves_shape_and_endpoints():
+    """수천 개 도로 링크 정점과 중복 좌표를 왜곡 없이 max_points 이내로 경량화하는지 검증"""
+    raw = []
+    # L자 + S자 굴곡 포함 1,500개 정점 + 연속 중복 점
+    for i in range(500):
+        t = i / 499.0
+        raw.append((37.62 - 0.15 * t, 128.74 - 0.80 * t))
+        if i % 50 == 0:
+            raw.append((37.62 - 0.15 * t, 128.74 - 0.80 * t))  # duplicate
+    for i in range(500):
+        t = i / 499.0
+        raw.append((37.47 + 0.10 * t, 127.94 - 0.50 * t))
+    for i in range(500):
+        t = i / 499.0
+        raw.append((37.57 - 0.08 * t, 127.44 - 0.41 * t))
+
+    simplified = simplify_route_polyline(raw, max_points=60)
+    assert 3 <= len(simplified) <= 60
+    assert simplified[0] == {"lat": 37.62, "lng": 128.74}
+    assert simplified[-1] == {"lat": 37.49, "lng": 127.03}
 
 
 def test_places_and_ev_charger_search_mock():

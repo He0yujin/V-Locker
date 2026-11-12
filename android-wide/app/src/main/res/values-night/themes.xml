@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.VLocker" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/vlocker_teal</item>
+        <item name="colorPrimaryVariant">@color/vlocker_topbar_bg</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/vlocker_mint</item>
+        <item name="colorSecondaryVariant">@color/vlocker_teal</item>
+        <item name="colorOnSecondary">@color/vlocker_ink</item>
+        <item name="android:statusBarColor">@color/vlocker_topbar_bg</item>
+        <item name="android:windowBackground">@color/vlocker_canvas_bg</item>
+    </style>
+</resources>

@@ -63,44 +63,48 @@ $$E_{pure} = \frac{E_{driving}(d, \eta_{base}) + E_{elevation}(\Delta h, m)}{\et
 
 ## 4. 인카 인포테인먼트(IVI) 화면 플로우
 
-현대자동차 Pleos 와이드 디스플레이(16:9 / 21:9) 환경에 최적화된 4대 핵심 화면으로 구성됩니다:
+현대자동차 아이오닉 5 / Pleos Connect 와이드 디스플레이(`2560x1440 @ 160dpi` 기준 `16:9` / `21:9` 반응형 스케일링)에 최적화된 4대 상단 탭(`안전귀가 설정` · `에너지 분석` · `모니터링` · `유틸리티`) 및 핵심 화면으로 구성됩니다:
 
 ```
 [Screen 01] 귀가 경로 & 출발 설정
-  ├─ 목적지 검색 및 [우리 집], [가까운 급속 충전소] 원터치 숏컷
-  ├─ 예상 출발 시각 및 탑승 인원(중량 계산 연동) 선택
-  └─ 경로 지도 및 상승 고도(+640m) 미리보기
+  ├─ 목적지 검색 및 [우리 집], [인근 급속 충전소] 원터치 숏컷
+  ├─ 한국 실제 GPS 위치 자동 반영(LocationHelper) + 출발 시각 · 탑승 인원 선택
+  └─ 실도로 폴리라인 지도 미리보기(RoutePreviewView, 확대/축소 지원) & 상승 고도(+640m)
         │
-        ▼ [경로 분석하기]
-[Screen 02] AI 융합 분석 & 3단계 마진 선택
-  ├─ 기상/고도/전비 융합 분석 요약 바
-  ├─ 안심(34%) / 균형(28%) / 최대사용(24%) 카드 선택 (가용 시간 동시 표기)
-  └─ [이 기준으로 모니터링] 클릭
+        ▼ [AI 귀가 경로 & 배터리 분석하기]
+[Screen 02] AI 융합 분석 & 3단계 마진 선택 (+ [에너지 분석] 상세 탭)
+  ├─ 기상/고도/전비/콜드스타트 융합 분석 요약
+  ├─ 안심(37.9%) / 균형 추천(32.3%) / 최대 사용(28.1%) 카드 선택 (가용 시간 동시 표기)
+  └─ [이 기준으로 V2L 모니터링 시작] 클릭
         │
         ▼
 [Screen 03] 실시간 V2L 세이프 모니터링 대시보드
-  ├─ 현재 배터리 61% 프로그레스 바 & 예약 잔량 28% 표시 (차단까지 33%p)
-  ├─ 실시간 소비 전력(1.2 kW) 및 차단 카운트다운 (약 21.3시간 남음)
-  ├─ 1시간 전 알림 / 30분 전 긴급 알림 팝업 (사용 연장 연동)
-  └─ [데모 시연용] 배터리 가속 소모 시뮬레이션 버튼 지원
-        │
-        ▼ (예약 잔량 28% 도달)
+  ├─ 현재 배터리 61% 분할 게이지 바 & 예약 잔량 32.3% 표시 (가용 여유 28.7%p)
+  ├─ 실시간 소비 전력(1.2 kW) 추이 그래프(PowerTrendView) & 차단 카운트다운
+  ├─ 1시간 전 / 30분 전 사전 경고 팝업 (급속충전소 스마트 [사용 연장] 연동)
+  └─ [시연용] 10% 소모 · 1시간 전 · 30분 전 · 통신장애 Fallback 시뮬레이션 지원
+        │ (서버 미연결 시에도 OfflineSafetyEngine으로 동일 안전 로직 무중단 동작)
+        ▼ (예약 잔량 도달 또는 수동 차단)
 [Screen 04] V2L 안전 락아웃 & 무시동 히터 자동 전환
-  ├─ V2L 물리 릴레이 차단 (누설 전력 0W)
-  ├─ 배터리 28% 안전 보존 완료 (귀가 가능 거리 92km)
-  └─ [안전 페일세이프] 차량 내부 무시동 히터(유틸리티 모드 21℃) 자동 가동
+  ├─ V2L 물리 릴레이 차단 (V2lHardwareController 어댑터)
+  ├─ 귀가 전력 안전 보존 완료 & 귀가 가능 거리 안내
+  └─ [안전 페일세이프] Pleos HVAC SDK로 차량 내부 무시동 히터(유틸리티 모드 21℃) 자동 가동
 ```
 
 ---
 
 ## 5. 기술 스택 (Tech Stack)
 
-* **Backend:** Python 3.13, **FastAPI**, **SQLAlchemy**, **Pydantic v2**, **HTTPX**
-* **External Live APIs:** 기상청 단기예보(`15084084`), 카카오 로컬, 카카오모빌리티 길찾기, Open-Meteo Elevation
-* **Database:** SQLite (온보드 임베디드 DB / PostgreSQL 마이그레이션 가능)
-* **In-Car Client (Target):** Android Automotive OS (Kotlin, Pleos Vehicle SDK `2.3.1`, Retrofit2)
-* **Testing:** Pytest (단위/통합 테스트 13종 100% 통과)
-* **Target Environment:** 현대자동차 Pleos App Market (SDV)
+* **Backend:** Python, **FastAPI**, **SQLAlchemy**, **Pydantic v2**, **HTTPX**
+* **External Live APIs:** 기상청 단기예보(`15084084`), 카카오 로컬, 카카오모빌리티 길찾기, Open-Meteo Forecast/Elevation, OSRM
+* **Database:** **PostgreSQL 17** (`users`, `v2l_sessions`, `favorite_destinations`, `v2l_session_events` 4개 테이블)
+* **In-Car Client (`android-wide`):** Android Automotive OS (Kotlin, `minSdk 28`, `compileSdk / targetSdk 37`, **Pleos Vehicle SDK `v2.3.2`**, Retrofit2)
+  * **와이드 반응형 스케일링:** `values`(폰) · `values-sw600dp-land` · `values-sw720dp-land` · `values-sw1050dp-land`(`2560x1440 @ 160dpi` 아이오닉 5 기준 ~2.0배 스케일)
+  * **로컬 안전/위치 엔진:** `OfflineSafetyEngine`, `RouteGeometry`, `LocationHelper`, `LocalStateStore`, `PleosPermissionHelper`
+* **Testing:**
+  * Android (`android-wide`): JVM 단위 테스트 **28종 100% 통과**
+  * Backend (`backend/tests`): Pytest **5개 테스트 스위트(21개 케이스)** 구성
+* **Target Environment:** 현대자동차 Pleos Connect / Pleos App Market (SDV)
 
 ---
 
@@ -118,7 +122,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # 의존성 설치
 pip install -r backend/requirements.txt
 
-# 환경변수 설정 (.env.example 복사 후 실제 키 입력)
+# 환경변수 설정 (.env.example 복사 후 DATABASE_URL 및 API 키 입력)
 cp .env.example .env
 ```
 
@@ -128,8 +132,12 @@ PYTHONPATH=. uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 * API 명세서(Swagger UI): `http://localhost:8000/docs`
 
-### 3) 단위 및 통합 테스트 실행 (13종 100% 통과 검증)
+### 3) 테스트 실행
 ```bash
+# 1) Android(android-wide) 단위 테스트 (28종) 및 디버그 APK 빌드
+./android-wide/gradlew -p android-wide testDebugUnitTest assembleDebug
+
+# 2) Backend Pytest (PostgreSQL DATABASE_URL 설정 필요)
 PYTHONPATH=. pytest backend/tests/ -v
 ```
 
@@ -138,34 +146,48 @@ PYTHONPATH=. pytest backend/tests/ -v
 ## 7. 프로젝트 디렉토리 구조
 
 ```
-V2L Safe Locker/
+V-Locker/
+├── android-wide/                        # Pleos Connect 와이드 디스플레이 최적화 Kotlin 앱
+│   └── app/src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml      # Pleos 권한(VEHICLE_BINDING/CAR_ENERGY/CLIMATE) & uses-feature 선언
+│       │   ├── java/com/example/Vlocker/
+│       │   │   ├── MainActivity.kt      # 4대 탭·모달 스케일링·상태 연동 메인 액티비티
+│       │   │   ├── data/LocalStateStore.kt
+│       │   │   ├── location/LocationHelper.kt
+│       │   │   ├── network/             # ApiClient, ApiModels, VlockerApiService
+│       │   │   ├── safety/OfflineSafetyEngine.kt
+│       │   │   ├── ui/                  # RoutePreviewView, RouteGeometry, PowerTrendView, SegmentedEnergyBarView, UiScaleHelper
+│       │   │   └── vehicle/PleosVehicleManager.kt  # Vehicle SDK v2.3.2 & PleosPermissionHelper
+│       │   └── res/
+│       │       ├── layout-land/         # 차량 와이드 가로형 레이아웃
+│       │       └── values-sw{600,720,1050}dp-land/  # 해상도별 반응형 dimens.xml
+│       └── test/                        # JVM 단위 테스트 7개 클래스 (28종)
 ├── backend/
 │   ├── app/
-│   │   ├── api/
-│   │   │   └── routes.py         # 통일된 JSON RESTful API 라우터
+│   │   ├── api/routes.py                # RESTful API 라우터 (/predict, /sessions, /favorites 등)
 │   │   ├── core/
-│   │   │   ├── config.py         # .env 환경변수 및 타임아웃(3.0s) 로드
-│   │   │   └── calculator.py     # 비례 가중치 배터리 예측 코어 엔진
+│   │   │   ├── config.py                # .env 환경변수 및 타임아웃(3.0s) 로드
+│   │   │   └── calculator.py            # 비례 가중치 배터리 예측 코어 엔진
 │   │   ├── db/
-│   │   │   ├── database.py       # SQLAlchemy SQLite 연결 설정
-│   │   │   └── models.py         # User, V2LSession DB 모델
-│   │   ├── schemas/
-│   │   │   └── session.py        # Pydantic v2 입출력 스키마
-│   │   ├── services/
-│   │   │   ├── places.py         # 카카오 로컬 목적지 & 충전소 검색
-│   │   │   ├── weather.py        # 기상청 단기예보 연동 (격자변환 / Fallback)
-│   │   │   ├── navigation.py     # 카카오모빌리티 길찾기 + 지형 고도 API
-│   │   │   └── v2l_controller.py # 릴레이 차단, Soft Lock-out, 무시동 히터 제어
-│   │   └── main.py               # FastAPI 애플리케이션 진입점
+│   │   │   ├── database.py              # PostgreSQL SQLAlchemy 연결 설정
+│   │   │   ├── models.py                # User, V2LSession, FavoriteDestination, V2LSessionEvent
+│   │   │   └── session_events.py        # 세션 상태 전이 자동 감사 이벤트 리스너
+│   │   ├── schemas/session.py           # Pydantic v2 입출력 스키마
+│   │   └── services/
+│   │       ├── places.py                # 카카오 로컬 목적지 & 충전소 검색
+│   │       ├── weather.py               # 기상청 단기예보 연동 (격자변환 / Fallback)
+│   │       ├── navigation.py            # 카카오모빌리티 길찾기 + 지형 고도 API + 폴리라인
+│   │       └── v2l_controller.py        # 릴레이 차단, Soft Lock-out, 무시동 히터 제어
 │   ├── requirements.txt
-│   └── tests/
-│       ├── test_calculator.py    # 수식/비례가중치/외부API 파싱 단위 테스트
-│       └── test_api_endpoints.py # 엔드포인트 수명주기 통합 테스트
-├── .env.example                  # API 키 환경변수 템플릿
-├── 와이어프레임/                  # IVI 와이드 인포테인먼트 화면 스크린샷
-├── 요구사항_정의서.md              # 상세 시스템 요구사항 정의서 (v1.2)
-├── API_명세서.md                  # RESTful API 엔드포인트 명세서 (v2.0)
-├── Pleos_개발_가이드.md           # Pleos Playground (Kotlin + SDK 2.3.1) 개발 가이드
-└── README.md                     # 프로젝트 소개 문서
+│   └── tests/                           # test_calculator, test_api_endpoints, test_favorites, test_db_*
+├── docs/
+│   └── ERD.md                           # PostgreSQL 4테이블 ERD 명세서
+├── .env.example                         # DB 및 외부 API 키 환경변수 템플릿
+├── V-Locker_기획서.md                   # 서비스 종합 기획서
+├── 요구사항_정의서.md                    # 시스템 요구사항 정의서 (v2.0)
+├── API_명세서.md                        # RESTful API 연동 명세서 (v2.1)
+├── Pleos_개발_가이드.md                 # Pleos Playground (Kotlin + SDK 2.3.2) 개발 가이드
+└── README.md                            # 프로젝트 소개 문서
 ```
 

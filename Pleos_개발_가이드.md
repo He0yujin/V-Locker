@@ -1,7 +1,7 @@
 # 🚗 [V2L 세이프 락커] Pleos Playground 개발 가이드
 
 > **문서 출처:** 현대자동차그룹 [Pleos Playground 공식 개발 문서](https://document.pleos.ai/docs/pleos-only/getting-started)  
-> **작성 일자:** 2026-11-09 | **대상 플랫폼:** Android Automotive OS (Pleos Connect)
+> **갱신 일자:** 2026-11-12 | **대상 플랫폼:** Android Automotive OS (Pleos Connect)
 
 ---
 
@@ -10,8 +10,8 @@
 | 구분 | 역할 및 기술 스택 | 현재 진행 상태 |
 | :--- | :--- | :---: |
 | **🎨 UI/UX 설계** | **Figma** (차량 와이드 인포테인먼트 와이어프레임 13종) | ✅ 완료 |
-| **🐍 AI 백엔드 서버** | **Python FastAPI** (기상/내비 연동, 비례 가중치 알고리즘, DB) | ✅ 1차 완료 |
-| **📱 차량 인카 앱** | **Android Studio (Kotlin)** + **Pleos Vehicle SDK (`v2.3.1`)** | 🔜 개발 예정 |
+| **🐍 AI 백엔드 서버** | **Python FastAPI** (기상/내비 연동, 비례 가중치 알고리즘, PostgreSQL DB) | ✅ 완료 |
+| **📱 차량 인카 앱 (`android-wide`)** | **Android Studio (Kotlin)** + **Pleos Vehicle SDK (`v2.3.2`)** + 와이드 반응형 UI (`2560x1440 / 160dpi`) | ✅ 완료 |
 
 > [!TIP]
 > **파이썬(FastAPI)과 피그마로 계속 진행해도 되나요?**  
@@ -36,7 +36,7 @@ flowchart LR
     subgraph Cloud["☁️ AI 백엔드 서버 (Python FastAPI)"]
         API["⚡ RESTful API<br/>(Retrofit2 통신)"]
         ALGO["🧠 예측 엔진<br/>(비례 가중치 알고리즘)"]
-        DB[("🗄️ SQLite DB<br/>(User / V2L_Session)")]
+        DB[("🗄️ PostgreSQL DB<br/>(Users / Sessions / Favorites / Events)")]
         EXT["🌐 외부 API<br/>(기상청 · 내비 토폴로지)"]
     end
 
@@ -62,7 +62,7 @@ Pleos Connect는 **Google Android Automotive OS (AAOS)** 기반 환경입니다.
 | **Minimum SDK (`minSdk`)** | **Android API 28 이상** | 차량 사이버 보안 필수 요건 |
 | **Target / Compile SDK** | **Android API 34 이상** | Pleos Connect Emulator 기준 |
 | **Gradle 버전** | **Gradle 8.0 이상** | 권장: Gradle 8.10.2 / AGP 8.8.2 |
-| **Pleos Vehicle SDK** | `ai.pleos.playground:Vehicle:2.3.1` | Maven 저장소 연동 필요 |
+| **Pleos Vehicle SDK** | `ai.pleos.playground:Vehicle:2.3.2` | Maven 저장소 연동 (실적용 버전) |
 
 ---
 
@@ -125,20 +125,22 @@ dependencyResolutionManagement {
 }
 ```
 
-#### 2) `app/build.gradle.kts` (SDK 및 통신 라이브러리 추가)
+#### 2) `app/build.gradle.kts` (SDK 및 통신 라이브러리 추가 — `android-wide` 실제 설정)
 ```kotlin
 android {
-    compileSdk = 34
+    compileSdk {
+        version = release(37)
+    }
 
     defaultConfig {
-        minSdk = 28      // 보안 필수 기준
-        targetSdk = 34
+        minSdk = 28      // 차량 보안 필수 기준
+        targetSdk = 37
     }
 }
 
 dependencies {
     // 🚗 Pleos Connect Vehicle SDK
-    implementation("ai.pleos.playground:Vehicle:2.3.1")
+    implementation("ai.pleos.playground:Vehicle:2.3.2")
     
     // 🌐 Python 백엔드(FastAPI) HTTP 통신용 Retrofit2
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
@@ -146,23 +148,31 @@ dependencies {
 }
 ```
 
-#### 3) `AndroidManifest.xml` (필수 권한 4종 선언)
+#### 3) `AndroidManifest.xml` (최소 권한 원칙 적용 선언)
 ```xml
-<!-- 1. Python 백엔드 서버 통신 권한 -->
+<!-- 1. Python 백엔드 서버 통신 및 한국 GPS 출발지 탐색 -->
 <uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-<!-- 2. 차량 배터리 잔량(SoC) 및 평균 전비 읽기 권한 -->
+<!-- 2. Pleos Vehicle Service 바인딩 (SDK v2.3.2 IPC 연결) -->
+<uses-permission android:name="ai.pleos.playground.service.vehicle.VEHICLE_BINDING" />
+
+<!-- 3. 차량 배터리 잔량(SoC) 및 평균 전비 읽기 권한 (미사용 CONTROL_CAR_ENERGY는 최소 권한 원칙상 제외) -->
 <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
 
-<!-- 3. 에너지 제어 권한 -->
-<uses-permission android:name="pleos.car.permission.CONTROL_CAR_ENERGY" />
-
-<!-- 4. 동사 방지 무시동 히터(HVAC 공조) 제어 권한 -->
+<!-- 4. 동사 방지 무시동 히터(HVAC 공조) 상태 조회 및 제어 권한 -->
 <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
+<uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
+
+<!-- 5. AAOS 타깃 선언 및 GPS 필수 요구 해제 (에뮬레이터/헤드유닛 호환) -->
+<uses-feature android:name="android.hardware.type.automotive" android:required="false" />
+<uses-feature android:name="android.hardware.location.gps" android:required="false" />
 ```
 
 > [!NOTE]
-> 로컬 테스트 중 Python 서버(`http://10.0.2.2:8000`)와 HTTP 통신이 차단되는 것을 막으려면 `AndroidManifest.xml`의 `<application>` 태그에 `android:usesCleartextTraffic="true"` 속성을 추가해 주세요.
+> * `Vehicle:2.3.2` SDK 바이너리 기준 `CONTROL_CAR_ENERGY`는 충전 제한/포트 제어 API 전용이므로, 조회 API만 호출하는 V-Locker에서는 **최소 권한 원칙**(Pleos App Review 정책)에 따라 선언하지 않습니다.
+> * 로컬 테스트 중 Python 서버(`http://10.0.2.2:8000`)와 HTTP 통신이 차단되는 것을 막으려면 `AndroidManifest.xml`의 `<application>` 태그에 `android:usesCleartextTraffic="true"` 속성을 유지하세요.
 
 ---
 
@@ -180,7 +190,7 @@ dependencies {
 
 > [!WARNING]
 > **🚨 중요 발견: 공개 SDK의 V2L 직접 차단 메서드 미공개 대응 전략**  
-> * **현황:** 클라우드 REST API(`Vehicle Data API`)에서는 V2L 동작 상태(`v2lOperating` / `v2lStop`) 조회가 지원되지만, 차량 내 공개 **Vehicle SDK v2.3.1**에는 안전 보안상 **서드파티 앱이 V2L 방전을 직접 강제 차단(`setV2lStop`)하는 메서드는 아직 열려 있지 않습니다.** (일반 충전 제어 `setEvChargePercentLimit`만 공개)
+> * **현황:** 클라우드 REST API(`Vehicle Data API`)에서는 V2L 동작 상태(`v2lOperating` / `v2lStop`) 조회가 지원되지만, 차량 내 공개 **Vehicle SDK v2.3.2**에는 안전 보안상 **서드파티 앱이 V2L 방전을 직접 강제 차단(`setV2lStop`)하는 메서드는 아직 열려 있지 않습니다.** (일반 충전 제어 `setEvChargePercentLimit`만 공개)
 > * **우리 앱의 아키텍처 해법:**
 >   1. **실제 배터리 감시(`EvBattery`) + 동사 방지 히터(`HVAC`) 제어는 100% 실제 Pleos SDK로 구현**하여 에뮬레이터에서 직접 작동시킵니다.
 >   2. **V2L 릴레이 차단 제어**는 `V2lHardwareController` 인터페이스로 추상화(Adapter Pattern)해 두고, *"보안 정책상 OEM 릴레이 쓰기 권한(`CONTROL_V2L_RELAY`)은 파트너십 심사 승인 후 즉시 플러그인 연결되도록 설계했다"*고 명시하면 완벽한 SDV 아키텍처로 평가받습니다!
@@ -218,9 +228,9 @@ sequenceDiagram
 
 ---
 
-## 🚀 7. 앞으로의 개발 로드맵
+## 🚀 7. 개발 로드맵 및 완료 현황
 
-- [ ] **Phase 1 (백엔드 고도화):** 현재 Python FastAPI 서버에 **실제 무료 기상/경로/장소 검색 API** 연동
-- [ ] **Phase 2 (개발 환경 구축):** Android Studio 설치 + `Pleos Connect Emulator (API 34)` + `Virtual Console (8088)` 구동 테스트
-- [ ] **Phase 3 (인카 앱 구현):** Kotlin으로 Figma 기반 와이드 화면 UI + Retrofit2(Python 연동) + Pleos SDK(`EvBattery`, `HVAC`) 연결
-- [ ] **Phase 4 (에뮬레이터 통합 시연):** Virtual Console로 배터리 소모·공조 온도 변화 테스트 및 Pleos App Market 규제(`CarUxRestrictions`) 점검
+- [x] **Phase 1 (백엔드 고도화):** Python FastAPI 서버에 **기상청/카카오/고도 API + 비례 가중치 코어 + PostgreSQL 4테이블** 연동 완료
+- [x] **Phase 2 (개발 환경·권한 정비):** `Vehicle SDK v2.3.2` + `AndroidManifest.xml` 최소 권한·`uses-feature` 및 `PleosPermissionHelper` 런타임 방어 적용 완료
+- [x] **Phase 3 (인카 앱 구현 · `android-wide`):** 차량 와이드(`2560x1440 / 160dpi` 기준 4단계 스케일링) UI + Retrofit2 + `OfflineSafetyEngine` + `LocationHelper` + `PleosVehicleManager` 구현 및 JVM 단위 테스트 28종 통과
+- [ ] **Phase 4 (에뮬레이터 통합 시연):** 팀원 PC `Pleos_Connect_v2.1.0` + Virtual Console(`8088`) 실차 센서 시연 검증 및 영상 촬영

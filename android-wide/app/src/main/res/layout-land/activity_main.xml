@@ -1,0 +1,2691 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/vlocker_canvas_bg"
+    android:orientation="vertical">
+
+    <!-- 상단 다크 헤더 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/vl_topbar_height"
+        android:background="@color/vlocker_topbar_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/vl_topbar_pad_h">
+
+        <LinearLayout
+            android:layout_width="@dimen/vl_brand_box_size"
+            android:layout_height="@dimen/vl_brand_box_size"
+            android:background="@drawable/bg_brand_mark"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="@dimen/vl_brand_icon_size"
+                android:layout_height="@dimen/vl_brand_icon_size"
+                android:contentDescription="V2L 세이프 락커 로고"
+                android:src="@drawable/ic_brand_shield" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/vl_brand_title_margin"
+            android:text="V2L 세이프 락커"
+            android:textColor="#F1F6F2"
+            android:textSize="@dimen/vl_brand_title_text"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tvTopVehicleMeta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/vl_top_meta_margin"
+            android:text="IONIQ 5 · 배터리 61%"
+            android:textColor="@color/vlocker_subtle"
+            android:textSize="@dimen/vl_top_meta_text" />
+
+        <LinearLayout
+            android:id="@+id/pillTopConnection"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/vl_pill_top_height"
+            android:background="@drawable/bg_pill_dark"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/vl_pill_pad_h">
+
+            <View
+                android:id="@+id/dotTopConnection"
+                android:layout_width="@dimen/vl_dot_size"
+                android:layout_height="@dimen/vl_dot_size"
+                android:background="@drawable/ic_dot_mint" />
+
+            <TextView
+                android:id="@+id/tvTopConnection"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/vl_pill_text_margin"
+                android:text="차량 연결됨"
+                android:textColor="@color/vlocker_mint"
+                android:textSize="@dimen/vl_pill_text"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="@dimen/vl_stroke_thin"
+            android:layout_height="@dimen/vl_top_divider_h"
+            android:layout_marginHorizontal="@dimen/vl_top_divider_margin"
+            android:background="#3C4D47" />
+
+        <ImageView
+            android:id="@+id/btnTopBell"
+            android:layout_width="@dimen/vl_top_icon_size"
+            android:layout_height="@dimen/vl_top_icon_size"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="알림 기록"
+            android:padding="@dimen/vl_top_icon_pad"
+            android:src="@drawable/ic_bell" />
+
+        <ImageView
+            android:id="@+id/btnTopSettings"
+            android:layout_width="@dimen/vl_top_icon_size"
+            android:layout_height="@dimen/vl_top_icon_size"
+            android:layout_marginStart="@dimen/vl_top_settings_margin"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="차량 및 연결 설정"
+            android:padding="@dimen/vl_top_icon_pad"
+            android:src="@drawable/ic_settings" />
+    </LinearLayout>
+
+    <!-- 상단 내비게이션 탭 바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/vl_tabbar_height"
+        android:background="@color/vlocker_surface"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/vl_tabbar_pad_h">
+
+        <LinearLayout
+            android:id="@+id/tabSafety"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/vl_tab_pad_h">
+
+            <TextView
+                android:id="@+id/tvTabSafety"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="안전 계획"
+                android:textColor="@color/vlocker_ink"
+                android:textSize="@dimen/vl_tab_text"
+                android:textStyle="bold" />
+
+            <View
+                android:id="@+id/indTabSafety"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vl_tab_indicator_height"
+                android:background="@color/vlocker_ink" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabEnergy"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/vl_tab_spacing"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/vl_tab_pad_h">
+
+            <TextView
+                android:id="@+id/tvTabEnergy"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="에너지 분석"
+                android:textColor="@color/vlocker_muted"
+                android:textSize="@dimen/vl_tab_text" />
+
+            <View
+                android:id="@+id/indTabEnergy"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vl_tab_indicator_height"
+                android:background="@android:color/transparent" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabMonitor"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/vl_tab_spacing"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/vl_tab_pad_h">
+
+            <TextView
+                android:id="@+id/tvTabMonitor"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="실시간 모니터링"
+                android:textColor="@color/vlocker_muted"
+                android:textSize="@dimen/vl_tab_text" />
+
+            <View
+                android:id="@+id/indTabMonitor"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vl_tab_indicator_height"
+                android:background="@android:color/transparent" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tabUtility"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/vl_tab_spacing"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/vl_tab_pad_h">
+
+            <TextView
+                android:id="@+id/tvTabUtility"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="차량 및 유틸리티"
+                android:textColor="@color/vlocker_muted"
+                android:textSize="@dimen/vl_tab_text" />
+
+            <View
+                android:id="@+id/indTabUtility"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vl_tab_indicator_height"
+                android:background="@android:color/transparent" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/vl_stroke_thin"
+        android:background="@color/vlocker_border" />
+
+    <!-- 화면 제목 배너 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/vlocker_surface"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/vl_banner_pad_h"
+        android:paddingVertical="@dimen/vl_banner_pad_v">
+
+        <TextView
+            android:id="@+id/tvPageTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="귀가 경로 설정"
+            android:textColor="@color/vlocker_ink"
+            android:textSize="@dimen/vl_page_title_text"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvPageSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/vl_page_subtitle_margin"
+            android:text="캠핑에 쓰는 에너지와 귀가를 위한 에너지를 한눈에 확인하세요."
+            android:textColor="@color/vlocker_muted"
+            android:textSize="@dimen/vl_page_subtitle_text"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/vl_stroke_thin"
+        android:background="@color/vlocker_border" />
+
+    <!-- 메인 콘텐츠 (세로 뷰포트 넘침 방지용 ScrollView) -->
+    <ScrollView
+        android:id="@+id/mainScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/vl_content_pad_h"
+            android:paddingVertical="@dimen/vl_content_pad_v">
+
+            <!-- 통신 지연/오프라인 안심 보호 배너 -->
+            <LinearLayout
+                android:id="@+id/cardFallbackNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/vl_fallback_margin_b"
+                android:background="@color/vlocker_alert_amber_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/vl_fallback_pad_h"
+                android:paddingVertical="@dimen/vl_fallback_pad_v"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="@dimen/vl_fallback_icon_size"
+                    android:layout_height="@dimen/vl_fallback_icon_size"
+                    android:src="@drawable/ic_info" />
+
+                <TextView
+                    android:id="@+id/tvFallbackNotice"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/vl_card_pad_v_compact"
+                    android:layout_weight="1"
+                    android:text="네트워크 연결이 원활하지 않아 안전 기본 기준(영하 5°C, 오르막 640m)으로 배터리를 보호하고 있습니다."
+                    android:textColor="@color/vlocker_alert_amber"
+                    android:textSize="@dimen/vl_fallback_text" />
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 1: 귀가 경로 설정 (2열 와이드 구성)               -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/screenRouteSetup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <!-- 좌측 카드: 귀가 일정 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="@dimen/vl_col_gap"
+                        android:layout_weight="0.39"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="귀가 일정"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_card_title_text"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/pillRouteMode"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_pill_neutral"
+                                    android:paddingHorizontal="@dimen/vl_pill_small_pad_h"
+                                    android:paddingVertical="@dimen/vl_pill_small_pad_v"
+                                    android:text="경로 선택"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_pill_small_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:text="목적지"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_label_text" />
+
+                            <!-- 검색 입력 바 -->
+                            <LinearLayout
+                                android:id="@+id/rowSearchBox"
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_input_height"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:background="@drawable/bg_input_box"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="@dimen/vl_input_pad_h">
+
+                                <ImageView
+                                    android:layout_width="@dimen/vl_input_icon_size"
+                                    android:layout_height="@dimen/vl_input_icon_size"
+                                    android:src="@drawable/ic_search_teal" />
+
+                                <EditText
+                                    android:id="@+id/etSearchQuery"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:layout_weight="1"
+                                    android:background="@android:color/transparent"
+                                    android:hint="집 또는 충전소 검색"
+                                    android:imeOptions="actionSearch"
+                                    android:inputType="text"
+                                    android:maxLines="1"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textColorHint="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_input_text" />
+
+                                <TextView
+                                    android:id="@+id/btnSearchSubmit"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="@dimen/vl_search_btn_height"
+                                    android:background="@drawable/bg_pill_mint"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:gravity="center"
+                                    android:paddingHorizontal="@dimen/vl_search_btn_pad_h"
+                                    android:text="검색"
+                                    android:textColor="@color/vlocker_teal"
+                                    android:textSize="@dimen/vl_search_btn_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <!-- 검색 결과 동적 리스트 -->
+                            <LinearLayout
+                                android:id="@+id/layoutPlaceDropdown"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:background="@drawable/bg_box_outlined"
+                                android:orientation="vertical"
+                                android:padding="@dimen/vl_divider_margin_v"
+                                android:visibility="gone" />
+
+                            <!-- 선택된 목적지 타일 -->
+                            <LinearLayout
+                                android:id="@+id/cardSelectedDest"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:background="@drawable/bg_input_box"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="@dimen/vl_input_pad_h"
+                                android:paddingVertical="@dimen/vl_dest_tile_pad_v">
+
+                                <ImageView
+                                    android:layout_width="@dimen/vl_dest_icon_size"
+                                    android:layout_height="@dimen/vl_dest_icon_size"
+                                    android:src="@drawable/ic_home_teal" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/tvSelectedDestName"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="우리 집"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_dest_title_text"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvSelectedDestSub"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="저장된 목적지로 경로 미리보기"
+                                        android:textColor="@color/vlocker_muted"
+                                        android:textSize="@dimen/vl_dest_sub_text" />
+                                </LinearLayout>
+
+                                <ImageView
+                                    android:id="@+id/ivSelectedDestCheck"
+                                    android:layout_width="@dimen/vl_input_icon_size"
+                                    android:layout_height="@dimen/vl_input_icon_size"
+                                    android:src="@drawable/ic_check_teal" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSelectHome"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_home_btn_height"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="우리 집으로 설정"
+                                android:textAllCaps="false"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_home_btn_text"
+                                android:textStyle="bold"
+                                app:backgroundTint="@color/vlocker_surface"
+                                app:cornerRadius="@dimen/vl_radius_button_sm"
+                                app:strokeColor="@color/vlocker_border"
+                                app:strokeWidth="@dimen/vl_stroke_thin" />
+
+                            <TextView
+                                android:id="@+id/btnSelectCharger"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:minHeight="@dimen/vl_touch_min_height"
+                                android:paddingVertical="@dimen/vl_charger_link_pad_v"
+                                android:text="가까운 급속 충전소  →"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_charger_link_text"
+                                android:textStyle="bold" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_stroke_thin"
+                                android:layout_marginVertical="@dimen/vl_divider_margin_v"
+                                android:background="@color/vlocker_border" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="예상 출발 시간 · 인원 · 사용 전력"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_label_text" />
+
+                            <LinearLayout
+                                android:id="@+id/cardDeparturePicker"
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_input_height"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:background="@drawable/bg_box_outlined"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="@dimen/vl_input_pad_h">
+
+                                <ImageView
+                                    android:layout_width="@dimen/vl_input_icon_size"
+                                    android:layout_height="@dimen/vl_input_icon_size"
+                                    android:src="@drawable/ic_calendar_teal" />
+
+                                <TextView
+                                    android:id="@+id/tvDepartureSummary"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="내일 오전 10:00 · 2명 · 1.2 kW"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_departure_text"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="@dimen/vl_input_icon_size"
+                                    android:layout_height="@dimen/vl_input_icon_size"
+                                    android:src="@drawable/ic_chevron_down" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 우측 카드: 귀가 경로 미리보기 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0.61"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="귀가 경로 미리보기"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_card_title_text"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvOriginDestBreadcrumb"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_pill_neutral"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:paddingHorizontal="@dimen/vl_pill_small_pad_h"
+                                    android:paddingVertical="@dimen/vl_pill_small_pad_v"
+                                    android:text="출발: 강릉 안반데기 → 우리 집 (변경)"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_pill_small_text" />
+                            </LinearLayout>
+
+                            <!-- 지도 미리보기 + 줌 버튼 -->
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_s1_map_height"
+                                android:layout_marginTop="@dimen/vl_card_gap_v">
+
+                                <com.example.Vlocker.ui.RoutePreviewView
+                                    android:id="@+id/routePreviewMap"
+                                    android:tag="has_overlay_title"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="top|start"
+                                    android:layout_margin="@dimen/vl_map_overlay_margin"
+                                    android:background="@drawable/bg_box_outlined"
+                                    android:paddingHorizontal="@dimen/vl_map_overlay_pad_h"
+                                    android:paddingVertical="@dimen/vl_map_overlay_pad_v"
+                                    android:text="귀가 경로 미리보기"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_pill_small_text" />
+
+                                <LinearLayout
+                                    android:layout_width="@dimen/vl_map_zoom_width"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="bottom|end"
+                                    android:layout_margin="@dimen/vl_map_overlay_margin"
+                                    android:background="@drawable/bg_box_outlined"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/btnMapZoomIn"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_map_zoom_btn_height"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="+"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_map_zoom_text" />
+
+                                    <View
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_stroke_thin"
+                                        android:background="@color/vlocker_border" />
+
+                                    <TextView
+                                        android:id="@+id/btnMapZoomOut"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_map_zoom_btn_height"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="-"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_map_zoom_text" />
+                                </LinearLayout>
+                            </FrameLayout>
+
+                            <!-- 하단 3대 핵심 수치 (큰 숫자) -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/tvMetricDistanceLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:text="우리 집까지 거리"
+                                        android:textColor="@color/vlocker_muted"
+                                        android:textSize="@dimen/vl_kpi_label_text" />
+
+                                    <TextView
+                                        android:id="@+id/tvMetricDistanceValue"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="86 km"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_kpi_value_text"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/tvMetricTimeLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="예상 주행 시간"
+                                        android:textColor="@color/vlocker_muted"
+                                        android:textSize="@dimen/vl_kpi_label_text" />
+
+                                    <TextView
+                                        android:id="@+id/tvMetricTimeValue"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="1시간 25분"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_kpi_value_text"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/tvMetricElevationLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="총 상승 고도"
+                                        android:textColor="@color/vlocker_muted"
+                                        android:textSize="@dimen/vl_kpi_label_text" />
+
+                                    <TextView
+                                        android:id="@+id/tvMetricElevationValue"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="+640 m"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_kpi_value_text"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <!-- 우측 하단 CTA 버튼 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:gravity="end|center_vertical"
+                    android:orientation="horizontal">
+
+                    <ProgressBar
+                        android:id="@+id/progressRouteLoading"
+                        android:layout_width="@dimen/vl_progress_size"
+                        android:layout_height="@dimen/vl_progress_size"
+                        android:layout_marginEnd="@dimen/vl_card_gap_v"
+                        android:visibility="gone" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGoToMargin"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_cta_height"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_cta_pad_h"
+                        android:text="귀가 예약 잔량 선택하기  →"
+                        android:textAllCaps="false"
+                        android:textColor="#F1F6F2"
+                        android:textSize="@dimen/vl_cta_text"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/vlocker_topbar_bg"
+                        app:cornerRadius="@dimen/vl_radius_button" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 2: 안전 귀가에 필요한 전력량 (3단 마진 선택)        -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/screenMarginPlan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- 상단 경로·기상·전비 요약 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/vlocker_surface"
+                    app:cardCornerRadius="@dimen/vl_radius_card"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/vlocker_border"
+                    app:strokeWidth="@dimen/vl_stroke_card">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="@dimen/vl_plan_summary_pad_h"
+                        android:paddingVertical="@dimen/vl_plan_summary_pad_v">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="@dimen/vl_plan_icon_size"
+                                android:layout_height="@dimen/vl_plan_icon_size"
+                                android:src="@drawable/ic_home_teal" />
+
+                            <TextView
+                                android:id="@+id/tvPlanDestTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/vl_input_pad_h"
+                                android:text="우리 집까지 86 km"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_plan_title_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvPlanDuration"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/vl_card_gap_v"
+                                android:layout_weight="1"
+                                android:text="예상 1시간 25분"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_plan_duration_text" />
+
+                            <TextView
+                                android:id="@+id/tvPlanDepartureBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_pill_mint"
+                                android:paddingHorizontal="@dimen/vl_pill_small_pad_h"
+                                android:paddingVertical="@dimen/vl_pill_small_pad_v"
+                                android:text="내일 오전 10:00 출발"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_pill_small_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/vl_stroke_thin"
+                            android:layout_marginVertical="@dimen/vl_divider_margin_v"
+                            android:background="@color/vlocker_border" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="예상 기온"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_plan_metric_label_text" />
+
+                                <TextView
+                                    android:id="@+id/tvPlanTempValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="-5°C"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_metric_value_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="총 상승 고도"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_plan_metric_label_text" />
+
+                                <TextView
+                                    android:id="@+id/tvPlanElevValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="+640 m"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_metric_value_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="평소 전비"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_plan_metric_label_text" />
+
+                                <TextView
+                                    android:id="@+id/tvPlanEffValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="5.4 km/kWh"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_metric_value_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="공조 여유분"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_plan_metric_label_text" />
+
+                                <TextView
+                                    android:id="@+id/tvPlanHvacValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="출발 전 반영"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_metric_value_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 3단 마진 헤더 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:layout_marginBottom="@dimen/vl_divider_margin_v"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="귀가 예약 잔량을 선택하세요"
+                        android:textColor="@color/vlocker_ink"
+                        android:textSize="@dimen/vl_card_title_text"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvPlanCurrentSocMeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="현재 배터리 61% 기준"
+                        android:textColor="@color/vlocker_muted"
+                        android:textSize="@dimen/vl_sub_text" />
+                </LinearLayout>
+
+                <!-- 3단 선택 카드: 안심 / 균형 / 최대 사용 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <!-- 안심 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardPlanSafe"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="안심"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_card_title_text"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:id="@+id/ivRadioSafe"
+                                    android:layout_width="@dimen/vl_plan_radio_size"
+                                    android:layout_height="@dimen/vl_plan_radio_size"
+                                    android:src="@drawable/ic_radio_empty" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="여유를 넉넉히 확보"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_sub_text" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:baselineAligned="true"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvSafeReserveNum"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="34%"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_reserve_num_text"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="귀가 예약 잔량"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_stroke_thin"
+                                android:layout_marginVertical="@dimen/vl_divider_margin_v"
+                                android:background="@color/vlocker_border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="앞으로 약"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvSafeUsableHours"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="5시간 10분"
+                                    android:textColor="@color/vlocker_teal"
+                                    android:textSize="@dimen/vl_plan_hours_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 균형 (기본 선택) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardPlanNormal"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_ink"
+                        app:strokeWidth="@dimen/vl_stroke_card_selected">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="균형 (추천)"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_card_title_text"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:id="@+id/ivRadioNormal"
+                                    android:layout_width="@dimen/vl_plan_radio_size"
+                                    android:layout_height="@dimen/vl_plan_radio_size"
+                                    android:src="@drawable/ic_radio_selected" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="주행 데이터 기준으로 설정"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_sub_text" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:baselineAligned="true"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvNormalReserveNum"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="28%"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_reserve_num_text"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="귀가 예약 잔량"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_stroke_thin"
+                                android:layout_marginVertical="@dimen/vl_divider_margin_v"
+                                android:background="@color/vlocker_border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="앞으로 약"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvNormalUsableHours"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="6시간 40분"
+                                    android:textColor="@color/vlocker_teal"
+                                    android:textSize="@dimen/vl_plan_hours_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- 최대 사용 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardPlanMax"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="최대 사용"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_card_title_text"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:id="@+id/ivRadioMax"
+                                    android:layout_width="@dimen/vl_plan_radio_size"
+                                    android:layout_height="@dimen/vl_plan_radio_size"
+                                    android:src="@drawable/ic_radio_empty" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="V2L 사용 시간을 우선 확보"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_sub_text" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                android:baselineAligned="true"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvMaxReserveNum"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="24%"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_plan_reserve_num_text"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_input_pad_h"
+                                    android:text="귀가 예약 잔량"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_stroke_thin"
+                                android:layout_marginVertical="@dimen/vl_divider_margin_v"
+                                android:background="@color/vlocker_border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="앞으로 약"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvMaxUsableHours"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="7시간 50분"
+                                    android:textColor="@color/vlocker_teal"
+                                    android:textSize="@dimen/vl_plan_hours_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <!-- 배터리 부족 경고 안내 -->
+                <TextView
+                    android:id="@+id/tvPlanInsufficientNotice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:background="@color/vlocker_alert_red_bg"
+                    android:paddingHorizontal="@dimen/vl_alert_notice_pad_h"
+                    android:paddingVertical="@dimen/vl_alert_notice_pad_v"
+                    android:text="현재 배터리가 선택한 안전 기준보다 낮습니다. 최대 사용을 고르거나 가까운 충전소로 경로를 변경해 주세요."
+                    android:textColor="@color/vlocker_alert_red"
+                    android:textSize="@dimen/vl_sub_text"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <!-- 하단 참고 문구 및 시작 버튼 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="@dimen/vl_info_icon_size"
+                        android:layout_height="@dimen/vl_info_icon_size"
+                        android:src="@drawable/ic_info" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/vl_input_pad_h"
+                        android:layout_marginEnd="@dimen/vl_col_gap"
+                        android:layout_weight="1"
+                        android:text="예측값은 참고치입니다. 실제 소모량은 기온, 적재량, 주행 조건에 따라 달라질 수 있습니다."
+                        android:textColor="@color/vlocker_muted"
+                        android:textSize="@dimen/vl_sub_text" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnStartMonitor"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_cta_height"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_cta_pad_h"
+                        android:text="이 기준으로 모니터링  →"
+                        android:textAllCaps="false"
+                        android:textColor="#F1F6F2"
+                        android:textSize="@dimen/vl_cta_text"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/vlocker_topbar_bg"
+                        app:cornerRadius="@dimen/vl_radius_button" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- TAB 2: 에너지 분석 (쉬운 한국어 상세 내역)              -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/screenEnergyAnalysis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="귀가 주행 기본 필요량"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyTotalNeed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="21.7 kWh"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_kpi_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="선택한 안전 예약 잔량"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyReserveTarget"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="32.3% (25.0 kWh)"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_kpi_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="캠핑 V2L 사용 가능량"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyUsableNow"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="22.2 kWh · 18시간 30분"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_energy_usable_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    app:cardBackgroundColor="@color/vlocker_surface"
+                    app:cardCornerRadius="@dimen/vl_radius_card"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/vlocker_border"
+                    app:strokeWidth="@dimen/vl_stroke_card">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/vl_mon_card_pad">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="어디에 전력이 필요한지 쉽게 살펴보세요"
+                            android:textColor="@color/vlocker_ink"
+                            android:textSize="@dimen/vl_energy_section_title_text"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/vl_energy_row_gap"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="평지 주행 예상 전력 (거리와 평소 전비 기준)"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_energy_row_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyBaseDrive"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="15.93 kWh"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_energy_row_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/vl_energy_row_gap"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="오르막·탑승 무게 반영 (내리막 충전 회수 포함)"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_energy_row_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyHillClimb"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="+1.08 kWh"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_energy_row_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/vl_energy_row_gap"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="추운 날씨 효율 저하 보정"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_energy_row_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyColdAdjust"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="-18.8% 반영"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_energy_row_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/vl_energy_row_gap"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="출발 직전 배터리 예열 및 실내 난방 여유"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_energy_row_label_text" />
+
+                            <TextView
+                                android:id="@+id/tvEnergyPreHeat"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.80 kWh"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_energy_row_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/vl_stroke_thin"
+                            android:layout_marginVertical="@dimen/vl_divider_margin_v"
+                            android:background="@color/vlocker_border" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="현재 선택한 안전 여유 기준"
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_energy_row_value_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvEnergySafetyMargin"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="균형 (+15% 여유)"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_energy_row_value_text"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:gravity="end"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEnergyBackPlan"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_cta_sec_height"
+                        android:layout_marginEnd="@dimen/vl_card_gap_v"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_cta_sec_pad_h"
+                        android:text="안전 계획으로"
+                        android:textAllCaps="false"
+                        android:textColor="@color/vlocker_ink"
+                        android:textSize="@dimen/vl_cta_sec_text"
+                        app:backgroundTint="@color/vlocker_surface"
+                        app:cornerRadius="@dimen/vl_radius_button"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_thin" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEnergyGoMonitor"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_cta_sec_height"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_cta_pad_h"
+                        android:text="이 기준으로 모니터링  →"
+                        android:textAllCaps="false"
+                        android:textColor="#F1F6F2"
+                        android:textSize="@dimen/vl_cta_text"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/vlocker_topbar_bg"
+                        app:cornerRadius="@dimen/vl_radius_button" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 3: V2L 안전 모니터링 (다크 히어로 + 귀가 조건)     -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/screenMonitor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <!-- 좌측 열 (다크 배터리 카드 + 소비 전력 카드) -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="@dimen/vl_col_gap"
+                        android:layout_weight="0.62"
+                        android:orientation="vertical">
+
+                        <!-- 다크 히어로 카드 -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:cardBackgroundColor="@color/vlocker_topbar_bg"
+                            app:cardCornerRadius="@dimen/vl_radius_card"
+                            app:cardElevation="0dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="@dimen/vl_mon_card_pad">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <LinearLayout
+                                        android:id="@+id/pillMonitorState"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="@dimen/vl_mon_state_pill_height"
+                                        android:background="@drawable/bg_pill_dark"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:paddingHorizontal="@dimen/vl_pill_pad_h">
+
+                                        <View
+                                            android:id="@+id/dotMonitorState"
+                                            android:layout_width="@dimen/vl_dot_size"
+                                            android:layout_height="@dimen/vl_dot_size"
+                                            android:background="@drawable/ic_dot_mint" />
+
+                                        <TextView
+                                            android:id="@+id/tvMonitorStateLabel"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="@dimen/vl_pill_text_margin"
+                                            android:text="현재 V2L 사용 중"
+                                            android:textColor="@color/vlocker_mint"
+                                            android:textSize="@dimen/vl_pill_small_text"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <View
+                                        android:layout_width="0dp"
+                                        android:layout_height="1dp"
+                                        android:layout_weight="1" />
+
+                                    <TextView
+                                        android:id="@+id/tvMonitorLiveTag"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="차량 배터리 실시간 수신"
+                                        android:textColor="@color/vlocker_subtle"
+                                        android:textSize="@dimen/vl_pill_small_text" />
+                                </LinearLayout>
+
+                                <!-- 큰 수치 2열 -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                                    android:orientation="horizontal">
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="0.45"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="배터리 잔량"
+                                            android:textColor="@color/vlocker_subtle"
+                                            android:textSize="@dimen/vl_label_text" />
+
+                                        <TextView
+                                            android:id="@+id/tvMonitorCurrentSoc"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="61%"
+                                            android:textColor="#F1F6F2"
+                                            android:textSize="@dimen/vl_mon_hero_soc_text"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="0.55"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="앞으로 약 사용 가능"
+                                            android:textColor="@color/vlocker_subtle"
+                                            android:textSize="@dimen/vl_label_text" />
+
+                                        <TextView
+                                            android:id="@+id/tvMonitorHoursLeft"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                            android:text="6시간 40분"
+                                            android:textColor="@color/vlocker_mint"
+                                            android:textSize="@dimen/vl_mon_hero_hours_text"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+                                </LinearLayout>
+
+                                <!-- 3단 분리 배터리 게이지 -->
+                                <com.example.Vlocker.ui.SegmentedEnergyBarView
+                                    android:id="@+id/energyBarMonitor"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="@dimen/vl_mon_energy_bar_height"
+                                    android:layout_marginTop="@dimen/vl_card_gap_v" />
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvMonitorReserveLabel"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:text="귀가 예약 28%"
+                                        android:textColor="@color/vlocker_subtle"
+                                        android:textSize="@dimen/vl_sub_text" />
+
+                                    <TextView
+                                        android:id="@+id/tvMonitorGapLabel"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:gravity="center"
+                                        android:text="차단 기준까지 33%p"
+                                        android:textColor="@color/vlocker_mint"
+                                        android:textSize="@dimen/vl_sub_text"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:gravity="end"
+                                        android:text="100%"
+                                        android:textColor="@color/vlocker_subtle"
+                                        android:textSize="@dimen/vl_sub_text" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvMonitorSummaryLine"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                    android:text="귀가 예약 잔량 28% · 균형 · 예약 잔량 도달 시 전원 공급 종료"
+                                    android:textColor="@color/vlocker_subtle"
+                                    android:textSize="@dimen/vl_sub_text" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- 실시간 소비 전력 카드 -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardMonitorLoad"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/vl_card_gap_v"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardBackgroundColor="@color/vlocker_surface"
+                            app:cardCornerRadius="@dimen/vl_radius_card"
+                            app:cardElevation="0dp"
+                            app:strokeColor="@color/vlocker_border"
+                            app:strokeWidth="@dimen/vl_stroke_card">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="@dimen/vl_mon_load_card_pad_h"
+                                android:paddingVertical="@dimen/vl_mon_load_card_pad_v">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="0.38"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="실시간 소비 전력"
+                                        android:textColor="@color/vlocker_muted"
+                                        android:textSize="@dimen/vl_label_text" />
+
+                                    <TextView
+                                        android:id="@+id/tvMonitorLoadValue"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="1.2 kW"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_mon_load_value_text"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="연결된 기기 전체 사용량"
+                                        android:textColor="@color/vlocker_muted"
+                                        android:textSize="@dimen/vl_caption_text" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="0.62"
+                                    android:orientation="vertical">
+
+                                    <com.example.Vlocker.ui.PowerTrendView
+                                        android:id="@+id/powerTrendChart"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_mon_power_chart_height" />
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="@dimen/vl_divider_margin_v"
+                                        android:orientation="horizontal">
+
+                                        <TextView
+                                            android:id="@+id/tvPowerTrendLeftLabel"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:ellipsize="end"
+                                            android:maxLines="1"
+                                            android:text="실시간 전력 대기 중"
+                                            android:textColor="@color/vlocker_muted"
+                                            android:textSize="@dimen/vl_sub_text" />
+
+                                        <TextView
+                                            android:id="@+id/tvPowerTrendRightLabel"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="@dimen/vl_input_pad_h"
+                                            android:text="대기"
+                                            android:textColor="@color/vlocker_muted"
+                                            android:textSize="@dimen/vl_sub_text" />
+                                    </LinearLayout>
+                                </LinearLayout>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <!-- 우측 열: 귀가 조건 카드 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0.38"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="귀가 조건"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_card_title_text"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/btnMonitorEditConditions"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:paddingVertical="@dimen/vl_charger_link_pad_v"
+                                    android:text="설정 변경  →"
+                                    android:textColor="@color/vlocker_teal"
+                                    android:textSize="@dimen/vl_pill_small_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/vl_mon_map_height"
+                                android:layout_marginTop="@dimen/vl_card_gap_v">
+
+                                <com.example.Vlocker.ui.RoutePreviewView
+                                    android:id="@+id/routePreviewMonitor"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent" />
+
+                                <LinearLayout
+                                    android:layout_width="@dimen/vl_mon_zoom_width"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="bottom|end"
+                                    android:layout_margin="@dimen/vl_mon_zoom_margin"
+                                    android:background="@drawable/bg_box_outlined"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/btnMonitorMapZoomIn"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_mon_zoom_btn_height"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="+"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_mon_zoom_text" />
+
+                                    <View
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_stroke_thin"
+                                        android:background="@color/vlocker_border" />
+
+                                    <TextView
+                                        android:id="@+id/btnMonitorMapZoomOut"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="@dimen/vl_mon_zoom_btn_height"
+                                        android:clickable="true"
+                                        android:focusable="true"
+                                        android:gravity="center"
+                                        android:text="-"
+                                        android:textColor="@color/vlocker_ink"
+                                        android:textSize="@dimen/vl_mon_zoom_text" />
+                                </LinearLayout>
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="목적지"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvCondDest"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="@dimen/vl_card_gap_h"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:gravity="end"
+                                    android:maxLines="1"
+                                    android:text="우리 집"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_sub_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_mon_row_gap"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="예상 출발"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvCondDeparture"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="내일 오전 10:00"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_sub_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_mon_row_gap"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="거리 / 예상 시간"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvCondDistTime"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="86 km / 1시간 25분"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_sub_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_mon_row_gap"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="예상 기온 / 상승 고도"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvCondWeatherElev"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="-5°C / +640 m"
+                                    android:textColor="@color/vlocker_ink"
+                                    android:textSize="@dimen/vl_sub_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_mon_row_gap"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="안전 마진"
+                                    android:textColor="@color/vlocker_muted"
+                                    android:textSize="@dimen/vl_sub_text" />
+
+                                <TextView
+                                    android:id="@+id/tvCondMargin"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="균형 · 예약 잔량 28%"
+                                    android:textColor="@color/vlocker_teal"
+                                    android:textSize="@dimen/vl_sub_text"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:text="기상·경로 예측은 주기적으로 업데이트됩니다. 실제 소모량은 주행 조건에 따라 달라집니다."
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_caption_text" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <!-- 중단 안내 바 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:background="@drawable/bg_pill_mint"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/vl_mon_banner_pad_h"
+                    android:paddingVertical="@dimen/vl_mon_banner_pad_v">
+
+                    <ImageView
+                        android:layout_width="@dimen/vl_input_icon_size"
+                        android:layout_height="@dimen/vl_input_icon_size"
+                        android:src="@drawable/ic_shield_teal" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/vl_input_pad_h"
+                        android:layout_weight="1"
+                        android:text="임계치 도달 1시간·30분 전에 알려드립니다. 차단 시 실내 난방 전환 여부를 확인합니다."
+                        android:textColor="@color/vlocker_ink"
+                        android:textSize="@dimen/vl_sub_text" />
+
+                    <TextView
+                        android:id="@+id/tvMonitorSafetyStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="안전 계획 활성"
+                        android:textColor="@color/vlocker_teal"
+                        android:textSize="@dimen/vl_sub_text"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- 하단 제어 바 (조용한 시연 컨트롤 + 우측 V2L 차단) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_pill_mint"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="@dimen/vl_mon_demo_pad_h"
+                        android:paddingVertical="@dimen/vl_mon_demo_pad_v">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="시연 컨트롤"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_sub_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="배터리 감소, 사전 알림, 네트워크 전환을 시연합니다."
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_caption_text" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/btnSimDrain"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/vl_mon_demo_btn_height"
+                            android:layout_marginStart="@dimen/vl_mon_demo_btn_gap"
+                            android:background="@drawable/bg_box_outlined"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:paddingHorizontal="@dimen/vl_mon_demo_btn_pad_h"
+                            android:text="배터리 소모"
+                            android:textColor="@color/vlocker_ink"
+                            android:textSize="@dimen/vl_mon_demo_btn_text"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnSimWarn60"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/vl_mon_demo_btn_height"
+                            android:layout_marginStart="@dimen/vl_mon_demo_btn_gap"
+                            android:background="@drawable/bg_box_outlined"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:paddingHorizontal="@dimen/vl_mon_demo_btn_pad_h"
+                            android:text="1시간 경고"
+                            android:textColor="@color/vlocker_ink"
+                            android:textSize="@dimen/vl_mon_demo_btn_text"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnSimWarn30"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/vl_mon_demo_btn_height"
+                            android:layout_marginStart="@dimen/vl_mon_demo_btn_gap"
+                            android:background="@drawable/bg_box_outlined"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:paddingHorizontal="@dimen/vl_mon_demo_btn_pad_h"
+                            android:text="30분 경고"
+                            android:textColor="@color/vlocker_ink"
+                            android:textSize="@dimen/vl_mon_demo_btn_text"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnSimFallback"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/vl_mon_demo_btn_height"
+                            android:layout_marginStart="@dimen/vl_mon_demo_btn_gap"
+                            android:background="@drawable/bg_box_outlined"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:paddingHorizontal="@dimen/vl_mon_demo_btn_pad_h"
+                            android:text="네트워크 장애"
+                            android:textColor="@color/vlocker_ink"
+                            android:textSize="@dimen/vl_mon_demo_btn_text"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnStopV2l"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_mon_stop_height"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_mon_stop_pad_h"
+                        android:text="V2L 차단"
+                        android:textAllCaps="false"
+                        android:textColor="@color/vlocker_ink"
+                        android:textSize="@dimen/vl_mon_stop_text"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/vlocker_surface"
+                        app:cornerRadius="@dimen/vl_radius_button"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_thin" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ===================================================== -->
+            <!-- SCREEN 4: 차량 및 유틸리티 (3열 큰 아이콘 카드)           -->
+            <!-- ===================================================== -->
+            <LinearLayout
+                android:id="@+id/screenUtility"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- 상단 안심 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/vlocker_surface"
+                    app:cardCornerRadius="@dimen/vl_radius_card"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/vlocker_border"
+                    app:strokeWidth="@dimen/vl_stroke_card">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/vl_card_pad">
+
+                        <ImageView
+                            android:layout_width="@dimen/vl_util_shield_size"
+                            android:layout_height="@dimen/vl_util_shield_size"
+                            android:src="@drawable/ic_shield_teal" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/vl_card_gap_h"
+                            android:layout_marginEnd="@dimen/vl_card_gap_h"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvUtilityHeadline"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="안전 귀가를 위해 V2L이 자동 종료되었습니다."
+                                android:textColor="@color/vlocker_ink"
+                                android:textSize="@dimen/vl_util_headline_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvUtilityDesc"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="차박 체온 유지를 위해 차량 내부 무시동 히터(유틸리티 모드 21°C)가 자동 작동 중입니다."
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_util_desc_text" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvUtilityBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill_neutral"
+                            android:paddingHorizontal="@dimen/vl_pill_small_pad_h"
+                            android:paddingVertical="@dimen/vl_pill_small_pad_v"
+                            android:text="귀가 전력 보호"
+                            android:textColor="@color/vlocker_ink"
+                            android:textSize="@dimen/vl_pill_small_text"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 중간 점검 요약 바 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    app:cardBackgroundColor="@color/vlocker_surface_muted"
+                    app:cardCornerRadius="@dimen/vl_radius_box"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/vlocker_border"
+                    app:strokeWidth="@dimen/vl_stroke_thin">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="@dimen/vl_mon_banner_pad_h"
+                        android:paddingVertical="@dimen/vl_mon_banner_pad_v">
+
+                        <ImageView
+                            android:layout_width="@dimen/vl_input_icon_size"
+                            android:layout_height="@dimen/vl_input_icon_size"
+                            android:src="@drawable/ic_check_teal" />
+
+                        <TextView
+                            android:id="@+id/tvUtilityCheckSummary"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/vl_input_pad_h"
+                            android:layout_weight="1"
+                            android:text="보존 잔량과 귀가 가능 거리를 확인했습니다. 실내 온도와 전원 상태를 확인해 주세요."
+                            android:textColor="@color/vlocker_muted"
+                            android:textSize="@dimen/vl_sub_text" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 3열 대형 유틸리티 상태 카드 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/vl_util_card_height"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <ImageView
+                                android:layout_width="@dimen/vl_util_icon_size"
+                                android:layout_height="@dimen/vl_util_icon_size"
+                                android:src="@drawable/ic_power_large" />
+
+                            <TextView
+                                android:id="@+id/tvCardPowerTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:text="V2L 자동 종료 완료"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_util_card_title_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvCardPowerSub"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="외부 전원 차단됨"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_util_card_sub_text" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/vl_util_card_height"
+                        android:layout_marginEnd="@dimen/vl_card_gap_h"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <ImageView
+                                android:layout_width="@dimen/vl_util_icon_size"
+                                android:layout_height="@dimen/vl_util_icon_size"
+                                android:src="@drawable/ic_thermometer_large" />
+
+                            <TextView
+                                android:id="@+id/tvCardHeaterTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:text="실내 난방 21°C"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_util_card_title_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvCardHeaterSub"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="무시동 히터 가동 중"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_util_card_sub_text" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/vl_util_card_height"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/vlocker_surface"
+                        app:cardCornerRadius="@dimen/vl_radius_card"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_card">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="@dimen/vl_card_pad">
+
+                            <ImageView
+                                android:layout_width="@dimen/vl_util_lock_icon_width"
+                                android:layout_height="@dimen/vl_util_icon_size"
+                                android:src="@drawable/ic_lock_large" />
+
+                            <TextView
+                                android:id="@+id/tvCardRangeTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/vl_card_gap_v"
+                                android:text="귀가 전력 보존 완료"
+                                android:textColor="@color/vlocker_teal"
+                                android:textSize="@dimen/vl_util_card_title_text"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvCardRangeSub"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="남은 배터리 28% · 약 92 km"
+                                android:textColor="@color/vlocker_muted"
+                                android:textSize="@dimen/vl_util_card_sub_text" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <!-- 우측 하단 액션 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/vl_card_gap_v"
+                    android:gravity="end"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnUtilityBack"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_cta_height"
+                        android:layout_marginEnd="@dimen/vl_card_gap_v"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_cta_sec_pad_h"
+                        android:text="모니터링으로"
+                        android:textAllCaps="false"
+                        android:textColor="@color/vlocker_ink"
+                        android:textSize="@dimen/vl_cta_sec_text"
+                        app:backgroundTint="@color/vlocker_surface"
+                        app:cornerRadius="@dimen/vl_radius_button"
+                        app:strokeColor="@color/vlocker_border"
+                        app:strokeWidth="@dimen/vl_stroke_thin" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnUtilityComplete"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/vl_cta_height"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingHorizontal="@dimen/vl_cta_pad_h"
+                        android:text="차단 완료"
+                        android:textAllCaps="false"
+                        android:textColor="#F1F6F2"
+                        android:textSize="@dimen/vl_cta_text"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/vlocker_topbar_bg"
+                        app:cornerRadius="@dimen/vl_radius_button" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

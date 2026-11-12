@@ -160,12 +160,25 @@ class FavoriteDestinationCreateRequest(BaseModel):
     )
 
 
+FavoriteCreateRequest = FavoriteDestinationCreateRequest
+
+
+class FavoriteUpdateRequest(BaseModel):
+    """즐겨찾기 목적지 수정 요청"""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="수정할 즐겨찾기 이름")
+    address: Optional[str] = Field(default=None, max_length=255, description="수정할 도로명/지번 주소")
+    latitude: Optional[float] = Field(default=None, ge=-90.0, le=90.0, description="수정할 위도")
+    longitude: Optional[float] = Field(default=None, ge=-180.0, le=180.0, description="수정할 경도")
+
+
 class ExtendRequest(BaseModel):
     origin_lat: float = Field(default=37.6242, description="현재 위치 위도")
     origin_lng: float = Field(default=128.7420, description="현재 위치 경도")
     nearest_charger_name: Optional[str] = Field(default=None, description="직접 지정 시 충전소 명칭 (null이면 카카오 로컬 자동 탐색)")
     distance_km: Optional[float] = Field(default=None, description="직접 지정 거리 (null이면 자동 탐색)")
     elevation_gain_m: float = Field(default=80.0, description="추정 상승고도")
+    dest_lat: Optional[float] = Field(default=None, description="직접 지정 충전소 위도")
+    dest_lng: Optional[float] = Field(default=None, description="직접 지정 충전소 경도")
 
     model_config = ConfigDict(
         json_schema_extra={

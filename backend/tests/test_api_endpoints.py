@@ -172,7 +172,11 @@ def test_session_lifecycle_and_soft_lockout(client):
         },
     )
     assert create_res.status_code == 200
-    session_id = create_res.json()["data"]["session_id"]
+    create_data = create_res.json()["data"]
+    session_id = create_data["session_id"]
+    assert create_data["destination_summary"]["destination"] == "우리 집"
+    assert create_data["destination_summary"]["margin_mode"] == "NORMAL"
+    assert create_data["is_fallback"] is False
 
     # GET /api/sessions/{id} 조회 확인
     get_res = client.get(f"/api/sessions/{session_id}")
@@ -185,6 +189,7 @@ def test_session_lifecycle_and_soft_lockout(client):
     # 2. 1시간 전 알림 도달 (34.0%로 감소 -> 남은 마진 1.7%p)
     tick1 = client.post(f"/api/sessions/{session_id}/tick", json={"soc_decrement": 27.0})
     assert tick1.json()["data"]["v2l_status"] == "WARN_60M"
+    assert tick1.json()["data"]["destination_summary"]["destination"] == "우리 집"
 
     # 3. 30분 전 긴급 알림 도달 (33.0%로 감소 -> 남은 마진 0.7%p)
     tick2 = client.post(f"/api/sessions/{session_id}/tick", json={"soc_decrement": 1.0})
@@ -321,6 +326,7 @@ def test_realtime_soc_sync_sessions_list_and_lockout_guard(client):
     assert sync_60.status_code == 200
     assert sync_60.json()["data"]["v2l_status"] == "WARN_60M"
     assert sync_60.json()["data"]["warning_level"] == 60
+    assert sync_60.json()["data"]["destination_summary"]["destination"] == "강남역 2호선"
 
     sync_30 = client.patch(f"/api/sessions/{session_id}/soc", json={"current_soc": 33.0})
     assert sync_30.status_code == 200
@@ -343,3 +349,86 @@ def test_realtime_soc_sync_sessions_list_and_lockout_guard(client):
     # 존재하지 않는 세션 404 검증
     assert client.patch("/api/sessions/99999/soc", json={"current_soc": 50.0}).status_code == 404
     assert client.get("/api/sessions/99999/events").status_code == 404
+
+
+def test_predict_and_extend_include_polyline_geometry(client):
+    """/api/predict 및 dest_lat/lng 포함 /extend 응답에 실제 도로 폴리라인 좌표가 포함되는지 검증"""
+    mock_nav = {
+        "distance_km": 190.6,
+        "elevation_gain_m": 419.0,
+        "estimated_duration_min": 203,
+        "is_fallback": False,
+        "geometry_type": "REAL_ROAD",
+        "polyline_points": [
+            {"lat": 37.6242, "lng": 128.7420},
+            {"lat": 37.5512, "lng": 128.1100},
+            {"lat": 37.4979, "lng": 127.0276},
+        ],
+    }
+    mock_weather = {"temperature": 3.0, "is_fallback": False, "source": "KMA", "description": "ok"}
+
+    with (
+        patch("backend.app.api.routes.fetch_forecast_temperature", return_value=mock_weather),
+        patch("backend.app.api.routes.fetch_route_topology", return_value=mock_nav),
+    ):
+        pred_res = client.post(
+            "/api/predict",
+            json={
+                "destination_name": "강남역 2호선",
+                "origin_lat": 37.6242,
+                "origin_lng": 128.7420,
+                "dest_lat": 37.4979,
+                "dest_lng": 127.0276,
+            },
+        )
+        assert pred_res.status_code == 200
+        nav = pred_res.json()["data"]["navigation"]
+        assert nav["geometry_type"] == "REAL_ROAD"
+        assert len(nav["polyline_points"]) == 3
+
+        create_res = client.post(
+            "/api/sessions",
+            json={
+                "destination_name": "강남역 2호선",
+                "distance_km": 190.6,
+                "elevation_gain_m": 419.0,
+                "expected_temp": 3.0,
+                "departure_time": "내일 오전 10:00",
+                "passengers": 2,
+                "margin_mode": "NORMAL",
+                "target_soc": 38.0,
+                "current_soc": 40.0,
+                "current_v2l_load_kw": 1.2,
+            },
+        )
+        sid = create_res.json()["data"]["session_id"]
+
+        charger_nav = {
+            "distance_km": 11.4,
+            "elevation_gain_m": 65.0,
+            "estimated_duration_min": 18,
+            "is_fallback": False,
+            "geometry_type": "REAL_ROAD",
+            "polyline_points": [
+                {"lat": 37.6242, "lng": 128.7420},
+                {"lat": 37.6510, "lng": 128.7360},
+                {"lat": 37.6845, "lng": 128.7290},
+            ],
+        }
+        with patch("backend.app.api.routes.fetch_route_topology", return_value=charger_nav):
+            ext_res = client.post(
+                f"/api/sessions/{sid}/extend",
+                json={
+                    "origin_lat": 37.6242,
+                    "origin_lng": 128.7420,
+                    "nearest_charger_name": "대관령휴게소 급속충전소",
+                    "distance_km": 11.4,
+                    "dest_lat": 37.6845,
+                    "dest_lng": 128.7290,
+                },
+            )
+            assert ext_res.status_code == 200
+            ext_data = ext_res.json()["data"]
+            assert ext_data["geometry_type"] == "REAL_ROAD"
+            assert ext_data["dest_lat"] == 37.6845
+            assert len(ext_data["polyline_points"]) == 3

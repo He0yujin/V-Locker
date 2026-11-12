@@ -77,6 +77,7 @@ def update_session_soc(
 
     return {
         "session_id": session.id,
+        "destination_name": session.destination_name,
         "current_soc": session.current_soc,
         "target_soc": session.target_soc,
         "remaining_margin_pct": round(max(0.0, session.current_soc - session.target_soc), 1),
@@ -86,6 +87,15 @@ def update_session_soc(
         "warning_level": warning_level,
         "relay_connected": session.relay_connected,
         "utility_mode_active": session.utility_mode_active,
+        "is_fallback": session.is_fallback,
+        "destination_summary": {
+            "destination": session.destination_name,
+            "departure": session.departure_time,
+            "distance_km": session.distance_km,
+            "elevation_gain_m": session.elevation_gain_m,
+            "temp_celsius": session.expected_temp,
+            "margin_mode": session.margin_mode,
+        },
     }
 
 

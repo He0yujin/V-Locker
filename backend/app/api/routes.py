@@ -20,10 +20,11 @@ from backend.app.schemas.session import (
     SocSyncRequest,
     ExtendRequest,
     FavoriteDestinationCreateRequest,
+    FavoriteUpdateRequest,
 )
 from backend.app.services.places import search_places, search_nearby_ev_chargers
 from backend.app.services.weather import fetch_forecast_temperature
-from backend.app.services.navigation import fetch_route_topology
+from backend.app.services.navigation import fetch_route_topology, build_estimated_polyline
 from backend.app.services.v2l_controller import (
     update_session_soc,
     execute_v2l_lockout,
@@ -150,6 +151,7 @@ def list_favorite_destinations(db: Session = Depends(get_db)):
             "favorites": [
                 {
                     "id": fav.id,
+                    "user_id": fav.user_id,
                     "name": fav.name,
                     "address": fav.address,
                     "latitude": fav.latitude,
@@ -171,6 +173,8 @@ def upsert_favorite_destination(
     """즐겨찾기 목적지(예: 우리 집) 등록 또는 동일 이름 좌표 갱신"""
     user = get_default_user(db)
     clean_name = req.name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=422, detail="name은(는) 공백일 수 없습니다.")
     existing = (
         db.query(FavoriteDestination)
         .filter(
@@ -204,6 +208,7 @@ def upsert_favorite_destination(
         status=200,
         data={
             "id": fav.id,
+            "user_id": fav.user_id,
             "name": fav.name,
             "address": fav.address,
             "latitude": fav.latitude,
@@ -211,6 +216,56 @@ def upsert_favorite_destination(
             "created_at": fav.created_at.isoformat() if fav.created_at else None,
         },
         message=msg,
+    )
+
+
+@router.put("/favorites/{favorite_id}", response_model=APIResponse)
+def update_favorite_destination(
+    favorite_id: int,
+    req: FavoriteUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    """등록된 즐겨찾기 목적지 정보 수정"""
+    user = get_default_user(db)
+    fav = (
+        db.query(FavoriteDestination)
+        .filter(
+            FavoriteDestination.id == favorite_id,
+            FavoriteDestination.user_id == user.id,
+        )
+        .first()
+    )
+    if not fav:
+        raise HTTPException(status_code=404, detail="즐겨찾기 목적지를 찾을 수 없습니다.")
+
+    updates = req.model_dump(exclude_unset=True)
+    for field in ("name", "latitude", "longitude"):
+        if field in updates and updates[field] is None:
+            raise HTTPException(status_code=422, detail=f"{field}은(는) null일 수 없습니다.")
+    if "name" in updates:
+        clean_name = updates["name"].strip()
+        if not clean_name:
+            raise HTTPException(status_code=422, detail="name은(는) 공백일 수 없습니다.")
+        updates["name"] = clean_name
+
+    for field, value in updates.items():
+        setattr(fav, field, value)
+
+    db.commit()
+    db.refresh(fav)
+
+    return APIResponse(
+        status=200,
+        data={
+            "id": fav.id,
+            "user_id": fav.user_id,
+            "name": fav.name,
+            "address": fav.address,
+            "latitude": fav.latitude,
+            "longitude": fav.longitude,
+            "created_at": fav.created_at.isoformat() if fav.created_at else None,
+        },
+        message="즐겨찾기 목적지가 수정되었습니다.",
     )
 
 
@@ -313,6 +368,8 @@ async def predict_battery_consumption(
             "elevation_gain_m": req.elevation_gain_m,
             "estimated_duration_min": round(req.distance_km * 1.1),
             "is_fallback": False,
+            "geometry_type": "ESTIMATED",
+            "polyline_points": build_estimated_polyline(req.origin_lat, req.origin_lng, d_lat, d_lng),
             "source": "User Override",
             "description": f"사용자 지정 경로 ({req.distance_km}km, +{req.elevation_gain_m}m)",
         }
@@ -422,9 +479,18 @@ def create_session(
             "current_v2l_load_kw": session.current_v2l_load_kw,
             "estimated_hours_left": hours_left,
             "v2l_status": session.v2l_status,
+            "warning_level": None,
             "relay_connected": session.relay_connected,
             "utility_mode_active": session.utility_mode_active,
             "is_fallback": session.is_fallback,
+            "destination_summary": {
+                "destination": session.destination_name,
+                "departure": session.departure_time,
+                "distance_km": session.distance_km,
+                "elevation_gain_m": session.elevation_gain_m,
+                "temp_celsius": session.expected_temp,
+                "margin_mode": session.margin_mode,
+            },
         },
         message="V2L 안전 모니터링 세션이 성공적으로 활성화되었습니다.",
     )
@@ -492,6 +558,7 @@ def get_session_status(
         status=200,
         data={
             "session_id": session.id,
+            "destination_name": session.destination_name,
             "current_soc": session.current_soc,
             "target_soc": session.target_soc,
             "remaining_margin_pct": round(max(0.0, session.current_soc - session.target_soc), 1),
@@ -616,6 +683,10 @@ async def extend_session(
     c_name = None if req.nearest_charger_name in (None, "", "string") else req.nearest_charger_name
     c_dist = None if (req.distance_km is None or req.distance_km <= 0) else req.distance_km
     c_elev = req.elevation_gain_m
+    ext_lat = None if req.dest_lat in (None, 0) else req.dest_lat
+    ext_lng = None if req.dest_lng in (None, 0) else req.dest_lng
+    ext_polyline = None
+    ext_geometry_type = "ESTIMATED"
 
     # 충전소가 명시되지 않은 경우 실제 카카오 로컬에서 가까운 충전소 탐색 + 경로 토폴로지 반영
     if c_name is None or c_dist is None:
@@ -624,20 +695,39 @@ async def extend_session(
         if chargers:
             c_name = chargers[0]["name"]
             c_dist = chargers[0]["distance_km"]
-            if not charger_res.get("is_fallback"):
+            ext_lat = chargers[0].get("lat")
+            ext_lng = chargers[0].get("lng")
+            if not charger_res.get("is_fallback") and ext_lat is not None and ext_lng is not None:
                 nav_res = await fetch_route_topology(
                     destination_name=c_name,
                     origin_lat=req.origin_lat,
                     origin_lng=req.origin_lng,
-                    dest_lat=chargers[0]["lat"],
-                    dest_lng=chargers[0]["lng"],
+                    dest_lat=ext_lat,
+                    dest_lng=ext_lng,
                 )
+                ext_polyline = nav_res.get("polyline_points")
+                ext_geometry_type = nav_res.get("geometry_type", "ESTIMATED")
                 if not nav_res.get("is_fallback"):
                     c_dist = nav_res["distance_km"]
                     c_elev = nav_res["elevation_gain_m"]
+            elif ext_lat is not None and ext_lng is not None:
+                ext_polyline = build_estimated_polyline(req.origin_lat, req.origin_lng, ext_lat, ext_lng)
         else:
             c_name = "인근 급속충전소"
             c_dist = 12.0
+    elif ext_lat is not None and ext_lng is not None:
+        nav_res = await fetch_route_topology(
+            destination_name=c_name,
+            origin_lat=req.origin_lat,
+            origin_lng=req.origin_lng,
+            dest_lat=ext_lat,
+            dest_lng=ext_lng,
+        )
+        ext_polyline = nav_res.get("polyline_points")
+        ext_geometry_type = nav_res.get("geometry_type", "ESTIMATED")
+        if not nav_res.get("is_fallback"):
+            c_dist = nav_res["distance_km"]
+            c_elev = nav_res["elevation_gain_m"]
 
     result = extend_v2l_session(
         db=db,
@@ -646,6 +736,12 @@ async def extend_session(
         distance_km=c_dist,
         elevation_gain_m=c_elev,
     )
+    if ext_lat is not None and ext_lng is not None:
+        result["dest_lat"] = ext_lat
+        result["dest_lng"] = ext_lng
+    if ext_polyline:
+        result["polyline_points"] = ext_polyline
+        result["geometry_type"] = ext_geometry_type
 
     return APIResponse(
         status=200,

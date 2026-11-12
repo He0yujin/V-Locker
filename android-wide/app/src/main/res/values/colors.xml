@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vlocker_topbar_bg">#182422</color>
+    <color name="vlocker_canvas_bg">#F4F7F5</color>
+    <color name="vlocker_surface">#FFFFFF</color>
+    <color name="vlocker_surface_muted">#F5F7F5</color>
+    <color name="vlocker_border">#E3E8E4</color>
+    <color name="vlocker_ink">#182725</color>
+    <color name="vlocker_muted">#667672</color>
+    <color name="vlocker_subtle">#A9BBB3</color>
+    <color name="vlocker_teal">#087F70</color>
+    <color name="vlocker_mint">#6EDAC1</color>
+    <color name="vlocker_mint_pale">#E4F3ED</color>
+    <color name="vlocker_pill_dark">#22322F</color>
+    <color name="vlocker_alert_red">#C22E29</color>
+    <color name="vlocker_alert_red_bg">#FDF2F2</color>
+    <color name="vlocker_alert_amber">#92400E</color>
+    <color name="vlocker_alert_amber_bg">#FEF3C7</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

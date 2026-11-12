@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- FastAPI 백엔드 서버 통신 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 현재 위치(출발지) 기반 충전소 및 귀가 경로 조회 -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Pleos Vehicle Service 바인딩 (SDK v2.3.2 IPC 연결 필수 권한) -->
+    <uses-permission android:name="ai.pleos.playground.service.vehicle.VEHICLE_BINDING" />
+
+    <!-- EV 배터리 잔량(SoC) 및 전비 조회 (CONTROL_CAR_ENERGY는 미사용으로 최소 권한 원칙상 제외) -->
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
+
+    <!-- 무시동 히터(HVAC) 상태/지원범위 조회 및 제어 -->
+    <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
+
+    <!-- AAOS 차량 환경 대응 선언 (비차량 개발/테스트 에뮬레이터 호환을 위해 required=false) -->
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="false" />
+
+    <!-- ACCESS_FINE_LOCATION에 따른 암묵적 GPS 하드웨어 필수 요구 해제 -->
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+
+    <queries>
+        <intent>
+            <action android:name="ai.pleos.playground.vehicle.VEHICLE_START" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VLocker"
+        android:usesCleartextTraffic="true">
+
+        <!-- CCP 조그 다이얼 미지원(터치 전용 앱) 선언 -->
+        <meta-data
+            android:name="com.hmg.rotary.ROTARY_SUPPORTED"
+            android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+
