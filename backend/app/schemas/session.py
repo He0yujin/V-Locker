@@ -191,3 +191,18 @@ class ExtendRequest(BaseModel):
             }
         }
     )
+
+class FavoriteCreateRequest(BaseModel):
+    """즐겨찾기 목적지 등록 요청"""
+    name: str = Field(..., min_length=1, max_length=100)
+    address: Optional[str] = Field(default=None, max_length=255)
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+
+
+class FavoriteUpdateRequest(BaseModel):
+    """즐겨찾기 목적지 수정 요청"""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    address: Optional[str] = Field(default=None, max_length=255)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
