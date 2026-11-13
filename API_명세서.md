@@ -1,11 +1,11 @@
 # 🔌 V2L 세이프 락커 API 연동 및 엔드포인트 명세서 (v2.1)
 
-* **버전:** v2.1 (실제 외부 API · 비례 가중치 · 도로 폴리라인 · `android-wide` 연동 현행화)
-* **작성/갱신일자:** 2026-11-12
-* **적용 환경:** 현대자동차 Pleos Connect (`android-wide` Kotlin 클라이언트) ↔ Python FastAPI 백엔드
+* **버전:** v2.1 (실제 외부 API · 비례 가중치 · 도로 폴리라인 · `android-finalversion` 연동 현행화)
+* **작성/갱신일자:** 2026-11-13
+* **적용 환경:** 현대자동차 Pleos Connect (`android-finalversion` Kotlin 클라이언트) ↔ Python FastAPI 백엔드
 
 > [!IMPORTANT]
-> 본 명세서는 [routes.py](file:///Users/heoyujin/Desktop/V-Locker/backend/app/api/routes.py) 및 [VlockerApiService.kt](file:///Users/heoyujin/Desktop/V-Locker/android-wide/app/src/main/java/com/example/Vlocker/network/VlockerApiService.kt)의 실제 구현과 일치하도록 현행화되었습니다.  
+> 본 명세서는 [routes.py](file:///Users/heoyujin/Desktop/V-Locker/backend/app/api/routes.py) 및 [VlockerApiService.kt](file:///Users/heoyujin/Desktop/V-Locker/android-finalversion/app/src/main/java/com/example/Vlocker/network/VlockerApiService.kt)의 실제 구현과 일치하도록 현행화되었습니다.  
 > 모든 백엔드 응답은 `{"status": 200, "data": {...}, "message": "..."}` 표준 JSON 포맷을 따르며, 서버 미연결 시에도 앱 내 `OfflineSafetyEngine`이 동일 물리 수식으로 무중단 폴백을 수행합니다.
 
 ---
@@ -62,7 +62,7 @@ flowchart TB
   3. **3순위:** Default Safety Fallback (**86.0km, +640.0m**, `is_fallback: true`)
 
 ### 2.3 [SDV] 현대자동차 Pleos Vehicle SDK `v2.3.2` 연동 포인트
-* **상세 가이드:** [Pleos_개발_가이드.md](file:///Users/heoyujin/Desktop/V-Locker/Pleos_%EA%B0%9C%EB%B0%9C_%EA%B0%80%EC%9D%B4%EB%93%9C.md), [PleosVehicleManager.kt](file:///Users/heoyujin/Desktop/V-Locker/android-wide/app/src/main/java/com/example/Vlocker/vehicle/PleosVehicleManager.kt)
+* **상세 가이드:** [Pleos_개발_가이드.md](file:///Users/heoyujin/Desktop/V-Locker/Pleos_%EA%B0%9C%EB%B0%9C_%EA%B0%80%EC%9D%B4%EB%93%9C.md), [PleosVehicleManager.kt](file:///Users/heoyujin/Desktop/V-Locker/android-finalversion/app/src/main/java/com/example/Vlocker/vehicle/PleosVehicleManager.kt)
 * **`EvBattery` (`CAR_ENERGY`):** 실시간 SoC(%) 조회/구독 및 누적 전비(km/kWh) 조회 → 백엔드 `/api/predict`, `/api/sessions` 전달 *(미사용 `CONTROL_CAR_ENERGY`는 최소 권한 원칙상 제외)*
 * **`HVAC` (`CAR_CLIMATE`, `CONTROL_CAR_CLIMATE`):** 락아웃 발생 시 동사 방지를 위해 차량 공조 쓰기 권한 및 허용 온도 범위 사전 검증 후 실내 목표 온도 **21.0℃** 유지 제어
 * **V2L 릴레이 차단 어댑터:** 공개 SDK 미노출 제어 영역을 `V2lHardwareController` 인터페이스로 추상화해 백엔드 상태 머신(`LOCKED_OUT`)과 연동

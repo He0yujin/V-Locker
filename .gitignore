@@ -51,21 +51,51 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Android Studio / Gradle (android/)
-android/.gradle/
-android/build/
-android/**/build/
-android/local.properties
-android/.idea/
-android/*.iml
-android/**/*.iml
-android/.cxx/
-android/.externalNativeBuild/
-android/.kotlin/
-android/captures/
-android/*.apk
-android/**/*.apk
-android/*.aab
-android/**/*.aab
+# Android Studio / Gradle
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.cxx/
+.externalNativeBuild/
+.kotlin/
+captures/
+
+android-prototype/.gradle/
+android-prototype/build/
+android-prototype/**/build/
+android-prototype/local.properties
+android-prototype/.idea/
+android-prototype/*.iml
+android-prototype/**/*.iml
+android-prototype/.cxx/
+android-prototype/.externalNativeBuild/
+android-prototype/.kotlin/
+android-prototype/captures/
+android-prototype/*.apk
+android-prototype/**/*.apk
+android-prototype/*.aab
+android-prototype/**/*.aab
+
+android-finalversion/.gradle/
+android-finalversion/build/
+android-finalversion/**/build/
+android-finalversion/local.properties
+android-finalversion/.idea/
+android-finalversion/*.iml
+android-finalversion/**/*.iml
+android-finalversion/.cxx/
+android-finalversion/.externalNativeBuild/
+android-finalversion/.kotlin/
+android-finalversion/captures/
+android-finalversion/*.apk
+android-finalversion/**/*.apk
+android-finalversion/*.aab
+android-finalversion/**/*.aab
+
+# Keep release APK in apk/ folder
+!apk/
+!apk/*.apk
 
 

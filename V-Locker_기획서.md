@@ -170,8 +170,8 @@ flowchart LR
 | :--- | :--- | :---: |
 | **AI 백엔드 서버** | 물리 수식 기반 예측 코어(`calculator.py`), 기상청/카카오/고도 연동, 3중 Fallback, 도로 폴리라인 생성, Pytest 5개 스위트(21개 케이스) 구축 | ✅ **구현 완료** |
 | **데이터베이스** | PostgreSQL 연동(`users`, `v2l_sessions`, `favorite_destinations`, `v2l_session_events`) 및 상태 전이 감사 로깅 | ✅ **구현 완료** |
-| **Pleos Android 앱 (`android-wide`)** | Kotlin 네이티브 대시보드, **차량 와이드 반응형 UI**(`2560x1440 / 160dpi` 기준 `sw1050dp-land` 등 4단계 스케일링), 커스텀 지도(`RoutePreviewView`)·전력추이·에너지바, 오프라인 안전엔진(`OfflineSafetyEngine`), GPS 한국 위치 탐색(`LocationHelper`), `PleosVehicleManager`(`Vehicle:2.3.2` 권한 방어), **JVM 단위 테스트 28종 통과** | ✅ **구현 완료** |
-| **통합 시연·최종 점검** | `Pleos_Connect_v2.1.0` + Virtual Console(`8088`) 실차 SDK 연동 시연 및 PR #8 병합/Git 정리 | 🔄 **시연 대기** |
+| **Pleos Android 앱 (`android-finalversion`)** | Kotlin 네이티브 대시보드, **차량 와이드 반응형 UI**(`2560x1440 / 160dpi` 기준 `sw1050dp-land` 등 4단계 스케일링), 커스텀 지도(`RoutePreviewView`)·전력추이·에너지바, 오프라인 안전엔진(`OfflineSafetyEngine`), GPS 한국 위치 탐색(`LocationHelper`), `PleosVehicleManager`(`Vehicle:2.3.2` 권한 방어), **JVM 단위 테스트 28종 통과** | ✅ **구현 완료** |
+| **통합 시연·최종 점검** | `Pleos_Connect_v2.1.0` + Virtual Console(`8088`) 실차 SDK 연동 시연 및 영상 촬영 완료, 실행 가능한 Release APK 빌드 완료 | ✅ **완료** |
 
 ---
 
@@ -217,6 +217,8 @@ flowchart LR
 > *(제출 시 필요에 따라 아래 항목을 포함하거나 생략할 수 있습니다.)*
 * **GitHub 저장소 (백엔드 + Pleos Android 네이티브 앱 소스코드):** https://github.com/He0yujin/V-Locker
 * **주요 포함 산출물:**
-  * `android-wide/`: 아이오닉 5 / Pleos Connect 와이드 디스플레이(`2560x1440 @ 160dpi`) 최적화 Kotlin 네이티브 앱 (`EvBattery`, `HVAC`, `OfflineSafetyEngine`, 반응형 `dimens`)
+  * `apk/호호이_V-Locker_release.apk`: 실행 가능한 정식 Release 빌드본 (약 6.7 MB)
+  * `android-finalversion/`: 아이오닉 5 / Pleos Connect 와이드 디스플레이(`2560x1440 @ 160dpi`) 최적화 Kotlin 네이티브 최종 앱 (`EvBattery`, `HVAC`, `OfflineSafetyEngine`, 반응형 `dimens`)
+  * `android-prototype/`: 1차 모바일 연동 프로토타입 보존본
   * `backend/`: Python FastAPI 기반 다중 데이터 융합 AI 예측 엔진 및 PostgreSQL 4테이블·세션 이벤트 로거
 

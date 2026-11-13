@@ -60,7 +60,7 @@ def test_favorite_crud(client):
     assert created["name"] == "우리 집"
     assert created["user_id"] >= 1
 
-    # 2. 즐겨찾기 목록 조회 (android-wide FavoritesListData: data.favorites 규격)
+    # 2. 즐겨찾기 목록 조회 (android-finalversion FavoritesListData: data.favorites 규격)
     response = client.get("/api/favorites")
 
     assert response.status_code == 200
@@ -89,7 +89,7 @@ def test_favorite_crud(client):
     response = client.get("/api/favorites")
     assert response.json()["data"]["favorites"][0]["name"] == "우리 집 (수정)"
 
-    # 4. 즐겨찾기 삭제 (android-wide Map<String, Int>: {"deleted_id": id} 규격)
+    # 4. 즐겨찾기 삭제 (android-finalversion Map<String, Int>: {"deleted_id": id} 규격)
     response = client.delete(f"/api/favorites/{favorite_id}")
 
     assert response.status_code == 200

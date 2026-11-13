@@ -1,7 +1,22 @@
-# V-Locker
+# V-Locker (브이-락커)
 
 > **"내일의 날씨, 지형, 주행 데이터를 분석하여 안전한 귀가를 보장하는 AI 기반 V2L 전력 자동 제어 인카 앱"**  
 > *현대자동차 Pleos App Market (SDV In-Car Infotainment) 최적화 서비스*
+
+---
+
+## 📌 제출 정보 및 핵심 요약 (Submission Info)
+
+| 항목 | 내용 |
+| :--- | :--- |
+| **팀명** | **호호이** |
+| **앱 이름** | **V-Locker (브이-락커)** |
+| **한 줄 소개** | 내일 아침의 기온·지형 고도·운전자 주행 전비를 AI로 융합 분석해 귀가 필수 배터리를 자동 보존하고, V2L 차단 즉시 차량 무시동 히터(21℃)를 자동 가동해 캠퍼의 안전까지 지키는 SDV 인카 전력 안전 제어 솔루션 |
+| **제출 APK 경로** | [`apk/호호이_V-Locker_release.apk`](file:///Users/heoyujin/Desktop/V-Locker/apk/호호이_V-Locker_release.apk) *(실행 가능한 정식 Release 빌드본, 약 6.7 MB)* |
+| **최종 인카 앱 소스** | [`android-finalversion/`](file:///Users/heoyujin/Desktop/V-Locker/android-finalversion) *(아이오닉 5 / Pleos Connect `2560x1440` 와이드 디스플레이 최적화)* |
+| **1차 프로토타입 소스** | [`android-prototype/`](file:///Users/heoyujin/Desktop/V-Locker/android-prototype) *(모바일 뷰 1차 프로토타입 보존본)* |
+| **백엔드 AI 엔진 소스** | [`backend/`](file:///Users/heoyujin/Desktop/V-Locker/backend) *(FastAPI + PostgreSQL 17 + 기상청/카카오/고도 연동)* |
+| **타깃 플랫폼** | 현대자동차그룹 Pleos Connect (Android Automotive OS 14 / API 34) |
 
 ---
 
@@ -93,18 +108,22 @@ $$E_{pure} = \frac{E_{driving}(d, \eta_{base}) + E_{elevation}(\Delta h, m)}{\et
 
 ---
 
-## 5. 기술 스택 (Tech Stack)
+## 5. 기술 스택 및 테스트 환경 (Tech Stack & Environment)
 
 * **Backend:** Python, **FastAPI**, **SQLAlchemy**, **Pydantic v2**, **HTTPX**
-* **External Live APIs:** 기상청 단기예보(`15084084`), 카카오 로컬, 카카오모빌리티 길찾기, Open-Meteo Forecast/Elevation, OSRM
+* **External Live APIs:** 기상청 단기예보(`15084084`), 카카오 로컬, 카카오모빌리티 길찾기, Open-Meteo Forecast/Elevation, OSRM (3중 안전망 자동 Fallback)
 * **Database:** **PostgreSQL 17** (`users`, `v2l_sessions`, `favorite_destinations`, `v2l_session_events` 4개 테이블)
-* **In-Car Client (`android-wide`):** Android Automotive OS (Kotlin, `minSdk 28`, `compileSdk / targetSdk 37`, **Pleos Vehicle SDK `v2.3.2`**, Retrofit2)
+* **In-Car Client (`android-finalversion`):**
+  * Android Automotive OS (Kotlin, `minSdk 28`, `compileSdk / targetSdk 37`, **Pleos Vehicle SDK `v2.3.2`**, Retrofit2)
   * **와이드 반응형 스케일링:** `values`(폰) · `values-sw600dp-land` · `values-sw720dp-land` · `values-sw1050dp-land`(`2560x1440 @ 160dpi` 아이오닉 5 기준 ~2.0배 스케일)
   * **로컬 안전/위치 엔진:** `OfflineSafetyEngine`, `RouteGeometry`, `LocationHelper`, `LocalStateStore`, `PleosPermissionHelper`
-* **Testing:**
-  * Android (`android-wide`): JVM 단위 테스트 **28종 100% 통과**
-  * Backend (`backend/tests`): Pytest **5개 테스트 스위트(21개 케이스)** 구성
-* **Target Environment:** 현대자동차 Pleos Connect / Pleos App Market (SDV)
+* **테스트 환경 및 필요 설정:**
+  * **에뮬레이터:** Android Studio `Pleos Connect v2.1.0` (Android 14 / API 34, Cold boot, RAM 4096MB 권장)
+  * **Virtual Console:** `http://127.0.0.1:8088/` (차량 배터리 SoC 및 공조 VHAL 제어)
+  * **검증 완료 현황:**
+    * Android (`android-finalversion`): JVM 단위 테스트 **28종 100% 통과**
+    * Backend (`backend/tests`): Pytest **5개 테스트 스위트(21개 케이스)** 구성
+    * Pleos Connect 에뮬레이터 실차 센서/HVAC 연동 실화면 시연 완료
 
 ---
 
@@ -132,10 +151,24 @@ PYTHONPATH=. uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 * API 명세서(Swagger UI): `http://localhost:8000/docs`
 
-### 3) 테스트 실행
+### 3) 인카 앱(APK) 설치 및 실행
 ```bash
-# 1) Android(android-wide) 단위 테스트 (28종) 및 디버그 APK 빌드
-./android-wide/gradlew -p android-wide testDebugUnitTest assembleDebug
+# 1. PC 에뮬레이터에 포트 포워딩 연결 (Virtual Console & 백엔드 통신)
+adb forward tcp:8088 tcp:8088
+adb reverse tcp:8000 tcp:8000
+
+# 2. 제출용 정식 Release APK 직접 설치
+adb install -r apk/호호이_V-Locker_release.apk
+
+# 3. 앱 실행
+adb shell am start -n com.example.Vlocker.wide/com.example.Vlocker.MainActivity
+```
+*(소스코드 직접 빌드 시: `./android-finalversion/gradlew -p android-finalversion assembleRelease`)*
+
+### 4) 테스트 실행
+```bash
+# 1) Android (android-finalversion) 단위 테스트 (28종)
+./android-finalversion/gradlew -p android-finalversion testDebugUnitTest
 
 # 2) Backend Pytest (PostgreSQL DATABASE_URL 설정 필요)
 PYTHONPATH=. pytest backend/tests/ -v
@@ -147,7 +180,9 @@ PYTHONPATH=. pytest backend/tests/ -v
 
 ```
 V-Locker/
-├── android-wide/                        # Pleos Connect 와이드 디스플레이 최적화 Kotlin 앱
+├── apk/                                 # 📦 최종 제출용 실행 가능한 Release APK
+│   └── 호호이_V-Locker_release.apk       # 호호이 팀 V-Locker 릴리스 APK (약 6.7 MB)
+├── android-finalversion/                # 🚘 [최종 제출] Pleos Connect 와이드 디스플레이 최적화 인카 앱
 │   └── app/src/
 │       ├── main/
 │       │   ├── AndroidManifest.xml      # Pleos 권한(VEHICLE_BINDING/CAR_ENERGY/CLIMATE) & uses-feature 선언
@@ -163,6 +198,7 @@ V-Locker/
 │       │       ├── layout-land/         # 차량 와이드 가로형 레이아웃
 │       │       └── values-sw{600,720,1050}dp-land/  # 해상도별 반응형 dimens.xml
 │       └── test/                        # JVM 단위 테스트 7개 클래스 (28종)
+├── android-prototype/                   # 📱 [보존본] 1차 모바일 프로토타입 앱 (스마트폰 뷰)
 ├── backend/
 │   ├── app/
 │   │   ├── api/routes.py                # RESTful API 라우터 (/predict, /sessions, /favorites 등)

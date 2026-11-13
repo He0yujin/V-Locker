@@ -11,7 +11,7 @@
 | :--- | :--- | :---: |
 | **🎨 UI/UX 설계** | **Figma** (차량 와이드 인포테인먼트 와이어프레임 13종) | ✅ 완료 |
 | **🐍 AI 백엔드 서버** | **Python FastAPI** (기상/내비 연동, 비례 가중치 알고리즘, PostgreSQL DB) | ✅ 완료 |
-| **📱 차량 인카 앱 (`android-wide`)** | **Android Studio (Kotlin)** + **Pleos Vehicle SDK (`v2.3.2`)** + 와이드 반응형 UI (`2560x1440 / 160dpi`) | ✅ 완료 |
+| **📱 차량 인카 앱 (`android-finalversion`)** | **Android Studio (Kotlin)** + **Pleos Vehicle SDK (`v2.3.2`)** + 와이드 반응형 UI (`2560x1440 / 160dpi`) | ✅ 완료 |
 
 > [!TIP]
 > **파이썬(FastAPI)과 피그마로 계속 진행해도 되나요?**  
@@ -125,7 +125,7 @@ dependencyResolutionManagement {
 }
 ```
 
-#### 2) `app/build.gradle.kts` (SDK 및 통신 라이브러리 추가 — `android-wide` 실제 설정)
+#### 2) `app/build.gradle.kts` (SDK 및 통신 라이브러리 추가 — `android-finalversion` 실제 설정)
 ```kotlin
 android {
     compileSdk {
@@ -232,5 +232,5 @@ sequenceDiagram
 
 - [x] **Phase 1 (백엔드 고도화):** Python FastAPI 서버에 **기상청/카카오/고도 API + 비례 가중치 코어 + PostgreSQL 4테이블** 연동 완료
 - [x] **Phase 2 (개발 환경·권한 정비):** `Vehicle SDK v2.3.2` + `AndroidManifest.xml` 최소 권한·`uses-feature` 및 `PleosPermissionHelper` 런타임 방어 적용 완료
-- [x] **Phase 3 (인카 앱 구현 · `android-wide`):** 차량 와이드(`2560x1440 / 160dpi` 기준 4단계 스케일링) UI + Retrofit2 + `OfflineSafetyEngine` + `LocationHelper` + `PleosVehicleManager` 구현 및 JVM 단위 테스트 28종 통과
-- [ ] **Phase 4 (에뮬레이터 통합 시연):** 팀원 PC `Pleos_Connect_v2.1.0` + Virtual Console(`8088`) 실차 센서 시연 검증 및 영상 촬영
+- [x] **Phase 3 (인카 앱 구현 · `android-finalversion`):** 차량 와이드(`2560x1440 / 160dpi` 기준 4단계 스케일링) UI + Retrofit2 + `OfflineSafetyEngine` + `LocationHelper` + `PleosVehicleManager` 구현 및 JVM 단위 테스트 28종 통과
+- [x] **Phase 4 (에뮬레이터 통합 시연):** `Pleos_Connect_v2.1.0` + Virtual Console(`8088`) 실차 센서 시연 검증 및 시연 영상 촬영 완료, 실행 가능한 Release APK 빌드 완료 (`apk/호호이_V-Locker_release.apk`)
