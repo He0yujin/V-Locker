@@ -99,38 +99,76 @@ $$E_{pure} = \frac{E_{driving}(d, \eta_{base}) + E_{elevation}(\Delta h, m) \tim
 
 ---
 
-## 5. 개발 계획 및 구현 현황
+## 5. 개발 계획
 
-### 5.1 시스템 구조
-차량 내 인포테인먼트 성능을 보장하기 위해 인카 앱은 화면 UI와 센서/하드웨어 SDK 연동에 집중하고, 외부 API 통신과 무거운 물리 계산은 백엔드 서버가 처리하도록 역할을 분리했습니다. 통신 장애 시에는 인카 앱 내부의 `OfflineSafetyEngine`이 스스로 계산을 이어받습니다.
+### 5.1 시스템 구조 및 주요 개발 범위
+차량 인포테인먼트 시스템의 리소스 점유를 줄이고 터치 응답성을 유지하기 위해, 차량 하드웨어 제어와 화면 표출은 **Pleos Connect 네이티브 앱(Kotlin)**이 담당하고 외부 기상·지형 데이터 수집과 물리 수식 연산은 **백엔드 서버(Python FastAPI + PostgreSQL)**가 처리하도록 역할을 분리했다. 또한 산간 차박지의 통신 단절 상황에 대비해 백엔드 연결이 끊어져도 앱 단독으로 동일한 물리 연산과 차단 로직을 수행하는 온디바이스 안전 엔진(`OfflineSafetyEngine`)을 함께 구현했다.
 
-```
-[차량 Pleos Connect 인카 앱 (Kotlin)]
-  ├── MainActivity (2560x1440 와이드 반응형 UI, 4단계 대시보드)
-  ├── PleosVehicleManager (Vehicle SDK 2.3.2 수명주기 및 권한 관리)
-  │     ├── EvBattery (배터리 SoC % 및 전비 구독)
-  │     └── HVAC (무시동 히터 전원 및 21℃ 제어)
-  └── OfflineSafetyEngine (오프라인 시 온디바이스 자체 계산)
-            ↕ (Retrofit2 REST API / 3중 무중단 통신)
-[경량 백엔드 엔진 (Python FastAPI + PostgreSQL)]
-  ├── Calculator (물리 수식 기반 배터리 소모 및 3단계 마진 산출)
-  └── Services (기상청 단기예보, 카카오 길찾기/고도, OSRM/Open-Meteo Fallback)
-```
+| 개발 영역 | 주요 개발 범위 | 구현 내용 |
+| :--- | :--- | :--- |
+| **Pleos 인카 앱 (`android-finalversion`)** | • 4단계 대시보드 및 다크 UI<br>• 차량 와이드 해상도 반응형 레이아웃<br>• 커스텀 시각화 뷰 3종<br>• 온디바이스 오프라인 안전 엔진 | • `Screen 01`(조건 입력) ~ `Screen 04`(차단·공조 전환) 원페이지 워크플로우 구현<br>• Pleos Connect 표준 해상도(`2560x1440 @ 160dpi`) 기준 `sw1050dp-land`, `sw720dp-land`, `sw600dp-land` 반응형 레이아웃 적용<br>• 경로 미니맵(`RoutePreviewView`), 실시간 부하 그래프(`PowerTrendView`), 배터리 분할 바(`SegmentedEnergyBarView`) 자체 구현<br>• `SharedPreferences` 기반 상태 복원(`LocalStateStore`) 및 오프라인 물리 연산 엔진(`OfflineSafetyEngine`) 탑재 |
+| **차량 제어 연동 (`PleosVehicleManager`)** | • Pleos Vehicle SDK `v2.3.2` 연동<br>• 배터리 잔량·누적 전비 수집<br>• 무시동 히터(HVAC) 자동 제어<br>• 런타임 권한 사전 검증 | • 차량 서비스 생명주기 바인딩 및 비차량/에뮬레이터 환경 안전 Fallback 처리<br>• BMS 배터리 충전율(SoC) 초기 조회, 실시간 리스너 구독 및 3초 주기 폴링 동기화<br>• V2L 목표 잔량 도달 시 1열 공조 전원 활성화 및 목표 온도(21.0℃) 자동 설정 |
+| **백엔드 및 DB (`backend`)** | • 물리 기반 귀가 전력 계산 코어<br>• 외부 기상·길찾기·고도 API 연동<br>• 세션 상태 관리 및 감사 로깅 | • 주행 기본 전력, 오르막 위치에너지($mgh$), 회생제동 회수율(75%), 저온 효율 저하 계수, 초기 난방 스파이크를 결합한 계산 모듈(`calculator.py`) 구현<br>• PostgreSQL 4개 테이블(`users`, `v2l_sessions`, `favorite_destinations`, `v2l_session_events`) 구축 및 SQLAlchemy 이벤트 리스너 기반 상태 변화 자동 기록 |
 
-### 5.2 Pleos Vehicle SDK 활용 명세 (`Vehicle:2.3.2`)
+---
 
-| 도메인 | 사용 API / 메소드 | 선언 권한 (`AndroidManifest.xml`) | 앱 내 실제 동작 |
-| :--- | :--- | :--- | :--- |
-| **엔트리포인트** | `Vehicle(context).initialize()`<br>`vehicle.getEvBattery()`<br>`vehicle.getHVAC()` | `ai.pleos.playground.service.vehicle.VEHICLE_BINDING` | 차량 서비스 바인딩 및 액티비티 종료 시 안전한 리소스 해제 |
-| **배터리 / 전비** | `getEvBatteryStateOfCharge`<br>`registerEvBatteryStateOfCharge`<br>`getCumulativeEvEfficiency` | `pleos.car.permission.CAR_ENERGY` | 현재 배터리 잔량(%) 및 누적 전비(km/kWh) 수집, 모니터링 중 실시간 SoC 변동 구독 |
-| **공조 (HVAC)** | `checkHvacTemperatureCapabilities`<br>`setHvacPower`<br>`setHvacTemperature` | `pleos.car.permission.CAR_CLIMATE`<br>`pleos.car.permission.CONTROL_CAR_CLIMATE` | 공조 제어 가능 범위 사전 확인 후, V2L 차단 시점에 1열 좌석 히터 전원을 켜고 21.0℃로 설정 |
-| **차량 디스플레이** | `sw1050dp-land`, `sw720dp-land`, `sw600dp-land`<br>`ROTARY_SUPPORTED="false"` 선언 | AAOS 인포테인먼트 표준 | Pleos Connect 2560x1440 와이드 가로 해상도에 맞춘 4단계 반응형 레이아웃 구성 |
+### 5.2 Pleos Playground SDK 사용 계획 (`ai.pleos.playground:Vehicle:2.3.2`)
+Pleos Connect 환경에서 차량 센서 데이터를 읽고 공조 하드웨어를 제어하기 위해 `Vehicle:2.3.2` SDK의 `EvBattery` 및 `HVAC` 도메인을 연동했다. 모든 SDK 호출부는 `PleosPermissionHelper`를 통해 매니페스트 권한 부여 여부를 먼저 확인한 뒤 실행된다.
 
-### 5.3 현재 구현 및 검증 현황
-* **Pleos Android 앱 (`android-finalversion/`):** Kotlin 기반 와이드 화면 전용 대시보드, 로컬 상태 저장소, 온디바이스 오프라인 엔진 구현 완료. **JVM 단위 테스트 28종 전체 통과**.
-* **백엔드 서버 (`backend/`):** 물리 계산 공식 및 3중 Fallback API 구축 완료. **Pytest 단위 테스트 통과**.
-* **시연 검증:** `Pleos_Connect_v2.1.0` 에뮬레이터 환경 및 Virtual Console(포트 8088) 연동 시연 완료.
-* **제출용 릴리스 APK:** `apk/호호이_V-Locker_release.apk` 빌드 완료 (용량 6.7MB).
+#### 1) 시스템 연결 및 생명주기 관리
+* **사용 API:** `Vehicle(context).initialize()`, `vehicle.getEvBattery()`, `vehicle.getHVAC()`, `vehicle.release()`
+* **적용 권한:** `ai.pleos.playground.service.vehicle.VEHICLE_BINDING`
+* **구현 내용:** `MainActivity.onCreate()` 시점에 차량 서비스 바인딩을 초기화하고 각 제어 매니저 인스턴스를 획득한다. 액티비티 종료(`onDestroy()`) 시 등록된 배터리 리스너를 해제하고 `vehicle.release()`를 호출해 IPC 리소스 누수를 방지한다.
+
+#### 2) 실시간 배터리 잔량(SoC) 및 운전자 주행 전비 수집 (`EvBattery`)
+* **사용 API:**
+  * `evBattery.getEvBatteryStateOfCharge(onComplete, onFailed)`
+  * `evBattery.registerEvBatteryStateOfCharge(EvBatteryStateOfChargeListener)`
+  * `evBattery.unregisterEvBatteryStateOfCharge(EvBatteryStateOfChargeListener)`
+  * `evBattery.getCumulativeEvEfficiency(onComplete, onFailed)`
+* **적용 권한:** `pleos.car.permission.CAR_ENERGY` (배터리/전비 읽기만 수행하므로 최소 권한 원칙에 따라 쓰기 권한인 `CONTROL_CAR_ENERGY`는 제외함)
+* **구현 내용:**
+  * 사용자가 앱을 실행하면 `getEvBatteryStateOfCharge()`와 `getCumulativeEvEfficiency()`를 호출해 현재 배터리 잔량(%)과 운전자의 실제 누적 전비(`km/kWh`)를 초기 설정 화면에 자동으로 채운다.
+  * V2L 모니터링이 시작되면 `EvBatteryStateOfChargeListener`를 등록해 실시간 배터리 감소를 추적한다.
+  * 에뮬레이터의 Virtual Console(`8088` 포트)에서 배터리 슬라이더를 조작할 때 푸시 콜백이 즉시 발생하지 않는 환경 특성을 보완하기 위해, 모니터링 중에는 3초 주기로 `getEvBatteryStateOfCharge()`를 함께 폴링하여 센서 값 변화가 UI와 차단 로직에 즉시 반영되도록 구현했다.
+
+#### 3) V2L 차단 직후 무시동 히터 자동 가동 (`HVAC`)
+* **사용 API:**
+  * `hvac.checkHvacTemperatureCapabilities(onComplete, onFailed)`
+  * `hvac.setHvacPower(SeatArea(SeatValue.ROW_1_LEFT), true, onComplete, onFailed)`
+  * `hvac.setHvacTemperature(SeatArea(SeatValue.ROW_1_LEFT), targetTempC, TemperatureUnit.CELSIUS, onComplete, onFailed)`
+* **적용 권한:** `pleos.car.permission.CAR_CLIMATE`, `pleos.car.permission.CONTROL_CAR_CLIMATE`
+* **구현 내용:**
+  * 공조 제어 명령을 내리기 전 `checkHvacTemperatureCapabilities()`를 호출해 운전석(`SeatValue.ROW_1_LEFT`) 영역이 쓰기 가능(`AccessType.WRITE` 또는 `READ_WRITE`)한지 확인하고, 차량이 지원하는 설정 온도 범위(`AreaBounds<Float>`, 기본 17.0~27.0℃) 내로 목표 온도를 보정(`coerceIn`)한다.
+  * 야간 차박 중 배터리가 보존 목표선(Target SoC)에 도달해 V2L 락아웃이 발동하면, `setHvacPower(..., true)`로 1열 공조 전원을 켜고 `setHvacTemperature(..., 21.0f, CELSIUS)`를 호출해 차량 무시동 히터를 자동으로 가동한다.
+
+#### 4) V2L 물리 릴레이 제어 추상화 (`V2lHardwareController`)
+* **구현 내용:** 현재 공개된 `Vehicle:2.3.2` SDK에는 서드파티 앱이 차량의 V2L 릴레이 하드웨어를 직접 차단하는 API가 포함되어 있지 않다. 이에 따라 앱 내부에 `V2lHardwareController` 어댑터 인터페이스를 정의하여 현재는 소프트웨어 차단 알림과 HVAC 공조 전환을 연동하고, 추후 OEM 권한(`CONTROL_V2L_RELAY`)이 개방되면 기존 비즈니스 로직 수정 없이 구현체만 교체해 물리 릴레이와 직결할 수 있도록 설계했다.
+
+---
+
+### 5.3 백엔드 REST API 및 외부 공공·상용 API 사용 계획
+인카 앱과 백엔드 서버는 `Retrofit2` 기반 JSON REST API로 통신하며, 외부 API 장애나 API 키 미설정 환경에서도 서비스가 중단되지 않도록 **3중 Fallback 구조**를 적용했다.
+
+#### 1) 외부 연동 API 및 Fallback 설계
+| 구분 | 1순위 (공식 API) | 2순위 (무키 오픈소스 API - 자동 우회) | 3순위 (오프라인 안전 기본값) | 구현 상세 |
+| :--- | :--- | :--- | :--- | :--- |
+| **기상 예보 (`weather.py`)** | 기상청 단기예보 API (`getVilageFcst`, `15084084`) | Open-Meteo Forecast API (`/v1/forecast`) | 동절기 보수적 안전 기온 (`-5.0℃`) | 위경도(WGS84)를 기상청 람베르트 정각원추도법(LCC) 5km 격자(`nx, ny`)로 변환해 익일 출발 시각 기온(`TMP`) 추출 |
+| **경로·고도 (`navigation.py`)** | 카카오모빌리티 길찾기 API + Open-Meteo Elevation API | OSRM 도로 길찾기 API + Open-Meteo Elevation API | 기본 안전 경로 (`86.0km`, `+640m`) | 도로 정점 중 25개 지점을 균등 샘플링해 해발고도를 조회한 뒤 오르막 상승분($\Delta h$)만 합산. 경로 좌표는 RDP(Ramer-Douglas-Peucker) 알고리즘으로 최대 80개 정점으로 경량화해 앱 미니맵에 전달 |
+| **장소·충전소 (`places.py`)** | 카카오 로컬 키워드 검색 API (`/v2/local/search/keyword.json`) | 내장 주요 거점 및 급속 충전소 데이터셋 | 반경 내 기본 충전소 좌표 매핑 | 목적지 좌표 검색 및 `[사용 연장]` 실행 시 차량 반경 20km 내 최단거리 급속 충전소 탐색 |
+
+#### 2) 주요 백엔드 엔드포인트 (`routes.py`)
+* `POST /api/v1/predict`: 출발지·목적지 좌표, 출발 시각, 탑승 인원, 현재 SoC, 차량 제원(배터리 용량·전비·공차중량)을 입력받아 기상·지형 API를 호출하고 3단계 마진(`SAFE`, `NORMAL`, `MAX_USE`)별 권장 예약 배터리(%)와 가용 시간을 반환한다.
+* `POST /api/v1/sessions` 및 `POST /api/v1/sessions/{id}/soc`: V2L 모니터링 세션을 생성하고 차량 BMS에서 전달되는 실시간 SoC 변화를 DB에 반영하여 종료 1시간 전(`WARN_60M`), 30분 전(`WARN_30M`), 차단 도달(`LOCKED_OUT`) 상태를 판정한다.
+* `POST /api/v1/sessions/extend`: 종료 30분 전 경고 시 인근 급속 충전소까지 이동하는 데 필요한 최소 전력으로 목표 SoC를 낮추어 추가 V2L 사용 시간을 산출한다.
+* `POST /api/v1/sessions/lockout`: 목표 SoC 도달 시 V2L 차단을 확정하고 인카 앱이 즉시 `HVAC` SDK(21.0℃)를 구동하도록 제어 명령 페이로드를 반환한다.
+
+---
+
+### 5.4 검증 및 테스트 결과
+* **Android 단위 테스트:** `android-finalversion/app/src/test/` 하위 7개 테스트 클래스에서 오프라인 물리 계산, 경로 기하 변환, 전력 추이 추적, UI 포맷팅 등 **28개 JVM 단위 테스트를 통과**했다.
+* **백엔드 테스트:** `backend/tests/` 하위 5개 테스트 스위트에서 온도·고도별 전력 계산식, API 엔드포인트, DB 트랜잭션 검증을 완료했다.
+* **시뮬레이터 통합 검증:** Android Studio의 `Pleos_Connect_v2.1.0` 시스템 이미지(`API 34`, `2560x1440`)와 Virtual Console(`8088` 포트) 환경에서 배터리 SoC 슬라이더 조작에 따른 실시간 차감, 30분 전 충전소 연장, 임계 도달 시 V2L 차단 및 무시동 히터 전환 동작을 검증하고 실행 가능한 릴리스 APK(`apk/호호이_V-Locker_release.apk`) 빌드를 완료했다.
 
 ---
 
